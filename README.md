@@ -104,3 +104,19 @@ dsh-<plugin>-offline-<version>-dsh-<targetDshVersion>/
 打包页只展示**非官方（第三方）插件**：DSH 官方内置插件（`@deepseek-ai/*` 或由 dsh 安装目录提供的 bundle）默认隐藏，并在列表上方标注「已隐藏 N 个官方内置插件」。
 - 接口层同样默认过滤；`GET /api/state?includeOfficial=1` 可查看全部（诊断用）。
 - 本地打包官方内置插件会被拒绝（错误码 `OFFICIAL_PLUGIN`），离线包面向第三方插件；如确需打包可在 HTTP 请求体传 `includeOfficial:true`。
+
+## 脚本通道（Skill：dsh-offline-packaging）
+
+除 Web UI 外，同一套打包引擎提供命令行入口，适合自动化/无 GUI 场景：
+
+```bash
+node skill/dsh-offline-packaging/scripts/offline-pack.mjs list
+node skill/dsh-offline-packaging/scripts/offline-pack.mjs local --plugin dsh-unlag --output /tmp/offline
+node skill/dsh-offline-packaging/scripts/offline-pack.mjs matrix --plugin dsh-better-sidebar
+node skill/dsh-offline-packaging/scripts/offline-pack.mjs registry --plugin dsh-better-sidebar --version 0.13.1 --target-dsh 0.1.0-rc.7
+```
+
+脚本会自动探测已安装的 `dsh-offline-packer`（`$DSH_HOME/profiles/*/node_modules/...`，也可 `--packer-dir`）。
+同时提供 DSH Skill（`$DSH_HOME/skills/dsh-offline-packaging/`）：对 Agent 说「把某插件打成离线包 / 给离线机器准备插件安装包」即可自动按该流程执行。
+支持 `--json`（脚本消费）、`--embed-host` / `--embed-declared` / `--extra`（按需多内嵌）、
+`local`（同版本本地通道）与 `registry`（历史 DSH 版本通道）。
