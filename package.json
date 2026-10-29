@@ -1,0 +1,34 @@
+{
+  "name": "dsh-offline-packer",
+  "version": "0.1.4",
+  "description": "Offline packaging for DSH plugins: graphically list the plugins of the current host, build a zero-network offline installer in one click, and package a plugin version that matches a historical DSH release.",
+  "type": "module",
+  "license": "MIT",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "lib",
+    "README.md",
+    "ARCHITECTURE.md"
+  ],
+  "engines": {
+    "dsh": ">=0.2.0-rc.1"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  }
+}

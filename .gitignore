@@ -1,0 +1,28 @@
+# Build artifacts / installables
+dsh-offline-packer-*.tgz
+*.zip
+*.tgz
+
+# Runtime / test homes (contain real DSH installations and node_modules)
+test/home*/
+test/out-*/
+test/*/node_modules/
+verify/home*/
+verify/tmp/
+verify/run/
+verify/dist-copy/
+verify/*/node_modules/
+
+# Verification evidence (large logs, raw artifacts, snapshots)
+verify/logs/
+verify/artifacts/
+verify/*.png
+verify/*.zip
+
+# Client-test screenshots (curated shots live in screenshots/)
+test/c/*.png
+
+# Generic
+node_modules/
+*.log
+.DS_Store

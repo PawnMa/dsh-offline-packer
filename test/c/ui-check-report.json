@@ -1,0 +1,163 @@
+{
+  "locale": "zh-CN",
+  "url": "http://127.0.0.1:3081/?token=<redacted>",
+  "records": [
+    {
+      "name": "navigator.language is the requested locale",
+      "passed": true,
+      "detail": "zh-CN"
+    },
+    {
+      "name": "settings nav contains \"离线打包\"",
+      "passed": true,
+      "detail": "通用设置 | 模型 | 内置插件 | Agent 预设 | 离线打包 | 打开配置文件 | 关闭 | 工作区内修改"
+    },
+    {
+      "name": "section root rendered",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "testid offline-packer-host-info exists",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "testid offline-packer-host-version exists",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "testid offline-packer-home-input exists",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "testid offline-packer-profile-input exists",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "testid offline-packer-refresh exists",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "testid offline-packer-output-root exists",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "testid offline-packer-search exists",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "testid offline-packer-list exists",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "plugin count attribute is readable",
+      "passed": true,
+      "detail": "19"
+    },
+    {
+      "name": "plugin rows rendered",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "row package button exists",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "row history button exists",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "search narrows to the named plugin",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "search with no match hides rows",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "history panel opens",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "history panel shows versions or a readable error",
+      "passed": true,
+      "detail": "rows=29 alerts=0"
+    },
+    {
+      "name": "page still rendered after refresh",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "healthy API shows no error banner",
+      "passed": true,
+      "detail": "HTTP 200 banners=0"
+    },
+    {
+      "name": "packaging attempt cannot break the page",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "packaging attempt reports a job or a readable error",
+      "passed": true,
+      "detail": "job=1 error=0"
+    },
+    {
+      "name": "job panel exposes status/logs",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "scan-source switch loads the user home",
+      "passed": true,
+      "detail": "plugins=17"
+    },
+    {
+      "name": "plugin source values are labelled lines",
+      "passed": true,
+      "detail": "source lines=12"
+    },
+    {
+      "name": "source line carries a value",
+      "passed": true,
+      "detail": "0.4.8"
+    },
+    {
+      "name": "profile directory is either under the scanned home or flagged",
+      "passed": true,
+      "detail": "followsHome=true note=0"
+    },
+    {
+      "name": "no page errors",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "no console errors",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "boot manifest lists dsh-offline-packer",
+      "passed": true,
+      "detail": "[\"@deepseek-ai/dsh-api-gateway\",\"@deepseek-ai/dsh-client-ui-open-in-app\",\"@deepseek-ai/dsh-api-job-controller\",\"@deepseek-ai/dsh-api-terminal-controller\",\"@deepseek-ai/dsh-api-workspace-files\",\"@deepseek-ai/dsh-client-ui-settings-account\",\"@deepseek-ai/dsh-client-hmr\",\"@deepseek-ai/dsh-client-modules\",\"@deepseek-ai/dsh-cordis-client-runner\",\"@deepseek-ai/dsh-client-ui-theme\",\"@deepseek-ai/dsh-client-locale\",\"@deepseek-ai/dsh-client-shortcuts\",\"@deepseek-ai/dsh-client-ui-shortcuts\",\"@deepseek-ai/dsh-client-ui-layout\",\"@deepseek-ai/dsh-client-ui-renderer\",\"@deepseek-ai/dsh-client-ui-session\",\"@deepseek-ai/dsh-client-resources\",\"@deepseek-ai/dsh-client-ui-sidebar\",\"@deepseek-ai/dsh-client-ui-sidebar-right\",\"@deepseek-ai/dsh-client-ui-sidebar-documentpreview\",\"@deepseek-ai/dsh-client-ui-sidebar-terminal\",\"@deepseek-ai/dsh-client-ui-sidebar-files\",\"@deepseek-ai/dsh-client-ui-settings\",\"@deepseek-ai/dsh-client-ui-settings-general\",\"@deepseek-ai/dsh-client-ui-settings-models\",\"@deepseek-ai/dsh-client-ui-plugin-manager\",\"@deepseek-ai/dsh-client-ui-settings-plugin-inventory\",\"@deepseek-ai/dsh-client-ui-conversation\",\"@deepseek-ai/dsh-client-ui-approval\",\"@deepseek-ai/dsh-client-ui-chat\",\"@deepseek-ai/dsh-client-ui-brand-official\",\"@deepseek-ai/dsh-client-ui-attachment\",\"@deepseek-ai/dsh-client-ui-tool\",\"@deepseek-ai/dsh-client-ui-cordis\",\"@deepseek-ai/dsh-client-ui-workspace\",\"@deepseek-ai/dsh-client-ui-workflow-run\",\"@deepseek-ai/dsh-client-ui-input-trigger\",\"@deepseek-ai/dsh-client-ui-commands\",\"@deepseek-ai/dsh-client-ui-skill\",\"@deepseek-ai/dsh-client-ui-subagent\",\"@deepseek-ai/dsh-client-ui-reference\",\"@deepseek-ai/dsh-client-ui-secret-mask\",\"@deepseek-ai/dsh-client-ui-jobs\",\"@deepseek-ai/dsh-client-ui-schedule\",\"@deepseek-ai/dsh-client-ui-goal\",\"@deepseek-ai/dsh-client-ui-message-feedback\",\"@deepseek-ai/dsh-client-ui-model-selection\",\"@deepseek-ai/dsh-client-ui-deepseek-model-label-1017\",\"@deepseek-ai/dsh-client-ui-permission-presets\",\"@deepseek-ai/dsh-client-ui-agent-preset\",\"@deepseek-ai/dsh-client-ui-settings-session-log\",\"@deepseek-ai/dsh-client-ui-settings-plugins\",\"@deepseek-ai/dsh-client-ui-settings-shell\",\"@deepseek-ai/dsh-client-ui-settings-agent-loop\",\"@deepseek-ai/dsh-client-ui-settings-subagent\",\"@deepseek-ai/dsh-client-ui-settings-web-search\",\"@deepseek-ai/dsh-client-ui-plan\",\"@deepseek-ai/dsh-client-ui-user-questions\",\"@deepseek-ai/dsh-client-ui-trajectory\",\"@deepseek-ai/dsh-api-remote-access\",\"@deepseek-ai/dsh-session-log-export\",\"@deepseek-ai/dsh-client-file-upload\",\"@deepseek-ai/dsh-api-remotes\",\"@deepseek-ai/dsh-client-ui-deliverables\",\"dsh-offline-packer\",\"@deepseek-ai/dsh-typert-registry\",\"@deepseek-ai/dsh-client-connection\",\"@deepseek-ai/dsh-api-workspace-controller\",\"@deepseek-ai/dsh-api-session-controller\",\"@deepseek-ai/dsh-client-ui-directory-picker-native\"]"
+    }
+  ],
+  "pageErrors": [],
+  "consoleErrors": []
+}

@@ -1,0 +1,3 @@
+- insert:
+    - id: offline-packer
+      name: 'dsh-offline-packer'
