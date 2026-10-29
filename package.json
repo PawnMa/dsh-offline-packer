@@ -1,6 +1,6 @@
 {
   "name": "dsh-offline-packer",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Offline packaging for DSH plugins: graphically list the plugins of the current host, build a zero-network offline installer in one click, and package a plugin version that matches a historical DSH release.",
   "type": "module",
   "license": "MIT",

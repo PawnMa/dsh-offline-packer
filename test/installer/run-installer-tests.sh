@@ -7,23 +7,38 @@
 # 产物）解包后跑三种安装方式，并验证卸载、bash -n、PowerShell AST + DryRun、
 # 内嵌 JS 的 ES5 兼容性（用 node@8.17.0 语法检查）。
 #
+# 第二轮（task-1 适配性校验）新增：用 dsh-better-sidebar@0.22.1（peer
+# @deepseek-ai/dsh-session ^0.1.7-rc.1）产物验证「插件 DSH peer 范围 vs 探测到的
+# 宿主版本」校验：不匹配默认 exit 2、--force 强制、--dry-run 只展示、宿主不可
+# 探测 warning 继续、无 DSH peer 跳过、--uninstall 不受影响；bash/PS1/Node8 三路。
+# 两个离线包都在测试开始时用当前 lib/scripts.mjs 重新生成（SKIP_FIXTURE_BUILD=1 可复用）。
+#
 # 用法：bash test/installer/run-installer-tests.sh
 # 退出码：0 = 全部通过；1 = 有失败（逐条打印 FAIL）。
+# 注意：全部用例都 `env -u DSH_HOME -u DSH_PROFILE_DIR` 并写沙盒 home，
+#       绝不读写 /home/fc/.dsh（fixture 构建的 local 通道只读扫描已装插件）。
 # =============================================================================
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd -P)"
+cd "$ROOT" || exit 1
 OUT="$ROOT/test/out-installer"
 LOG_DIR="$ROOT/test/installer/logs"
 BUNDLE="dsh-unlag-offline-1.12.3-dsh-0.2.1-rc.2"
 STAGING="$OUT/$BUNDLE"
 ZIP="$STAGING.zip"
+# dsh-better-sidebar@0.22.1 历史版本产物（适配性校验的「不匹配」样本）
+BS_BUNDLE="dsh-better-sidebar-offline-0.22.1-dsh-0.1.7-rc.2"
+BS_STAGING="$OUT/$BS_BUNDLE"
+BS_ZIP="$BS_STAGING.zip"
 EXTRACT_ROOT="$OUT/extract"
 EX="$EXTRACT_ROOT/$BUNDLE"
+BS_EX="$EXTRACT_ROOT/$BS_BUNDLE"
 HOMES="$OUT/homes"
 FAKEBIN="$OUT/fakebin"
 NODE8=""
 PWSH=""
+NODE_NOW="$(command -v node)"
 
 # 真正的 @deepseek-ai/dsh 安装目录（本机 0.2.1-rc.2）与 host-pinned（0.1.0-rc.7）
 DSH_REAL="/home/fc/.nvm/versions/node/v24.14.0/lib/node_modules/@deepseek-ai/dsh"
@@ -95,8 +110,43 @@ expect_bundle() {
   if [ "$got" = "$want" ]; then pass "$label：bundles $want"; else fail "$label：bundles=$got，期望 $want"; fi
 }
 
-section "0. 工具与产物检查"
-[ -f "$ZIP" ] || { echo "缺少离线包：$ZIP（先跑 test/out-installer 打包）"; exit 1; }
+section "0. 用最新源码重新生成离线包 + 工具检查"
+# 安装器模板就在 lib/scripts.mjs 里：复用旧 zip 会测到旧安装器，因此默认每次重建。
+# 调试时可 SKIP_FIXTURE_BUILD=1 复用已有产物。
+if [ "${SKIP_FIXTURE_BUILD:-0}" = "1" ] && [ -f "$ZIP" ] && [ -f "$BS_ZIP" ]; then
+  pass "SKIP_FIXTURE_BUILD=1：复用已有离线包"
+else
+  run build-fixtures node "$ROOT/test/installer/build-fixtures.mjs"
+  expect_exit 0 build-fixtures
+fi
+[ -f "$ZIP" ] || { echo "缺少离线包：$ZIP（fixture 构建失败，见 logs/build-fixtures.log）"; exit 1; }
+[ -f "$BS_ZIP" ] || { echo "缺少离线包：$BS_ZIP（fixture 构建失败，见 logs/build-fixtures.log）"; exit 1; }
+pass "离线包：$(basename "$ZIP")（$(stat -c%s "$ZIP" 2>/dev/null || echo '?') B）"
+pass "离线包：$(basename "$BS_ZIP")（$(stat -c%s "$BS_ZIP" 2>/dev/null || echo '?') B）"
+# 产物里的安装器必须与当前 generator 渲染结果逐字节一致（防止测旧模板）
+run fixture-fresh node --input-type=module -e '
+import { readFileSync } from "node:fs"
+import { renderInstallers } from "./lib/scripts.mjs"
+const cases = [
+  ["dsh-unlag-offline-1.12.3-dsh-0.2.1-rc.2", { pluginName: "dsh-unlag", version: "1.12.3", targetDshVersion: "0.2.1-rc.2", mode: "local" }],
+  ["dsh-better-sidebar-offline-0.22.1-dsh-0.1.7-rc.2", { pluginName: "dsh-better-sidebar", version: "0.22.1", targetDshVersion: "0.1.7-rc.2", mode: "registry" }],
+]
+for (const entry of cases) {
+  const actualSh = readFileSync("test/out-installer/" + entry[0] + "/install-offline.sh", "utf8")
+  const actualPs1 = readFileSync("test/out-installer/" + entry[0] + "/install-offline.ps1", "utf8")
+  const flagMatch = /^HAS_VENDORED_DEPS=(\d)$/m.exec(actualSh)
+  const rendered = renderInstallers({ ...entry[1], hasVendoredDeps: flagMatch !== null && flagMatch[1] === "1" })
+  for (const pair of [["install-offline.sh", actualSh], ["install-offline.ps1", actualPs1]]) {
+    if (pair[1] !== rendered[pair[0]]) {
+      console.error(pair[0] + " 与当前 generator 不一致：" + entry[0])
+      process.exit(1)
+    }
+  }
+}
+console.log("installers fresh")
+'
+expect_exit 0 fixture-fresh
+expect_in_log fixture-fresh "installers fresh"
 node --check "$ROOT/lib/scripts.mjs" && pass "node --check lib/scripts.mjs" || fail "node --check lib/scripts.mjs"
 
 # npx 拉取 node@8.17.0（本机需网络；已缓存时会很快）
@@ -146,7 +196,7 @@ mkdir -p "$LOG_DIR/embedded-js"
 run extract-js node "$ROOT/test/installer/extract-embedded-js.mjs" "$EX/install-offline.sh" "$LOG_DIR/embedded-js"
 expect_exit 0 extract-js
 EMBEDDED_COUNT="$(ls "$LOG_DIR/embedded-js"/*.js 2>/dev/null | wc -l | tr -d ' ')"
-pass "抽取到 $EMBEDDED_COUNT 个内嵌 JS 帮助脚本：$(cd "$LOG_DIR/embedded-js" && ls *.js | tr '\n' ' ')"
+pass "抽取到 $EMBEDDED_COUNT 个内嵌 JS 帮助脚本：$(cd "$LOG_DIR/embedded-js" && ls *.js | tr '\n' ' ' | sed 's/ *$//')"
 if [ -n "$NODE8" ]; then
   for js in "$LOG_DIR/embedded-js"/*.js; do
     "$NODE8" --check "$js" 2>"$LOG_DIR/node8-check.err"
@@ -185,6 +235,66 @@ if [ $? = 0 ]; then pass "产物 manifest：dependencies:{}、peer 全部 option
 for pattern in "--profile-dir" "DSH_PROFILE_DIR" "Node 8" "魔改" "未检测到 dsh 命令行/安装目录" "--dsh-install"; do
   if grep -qF -- "$pattern" "$EX/README.md"; then pass "README 覆盖「$pattern」"; else fail "README 缺少「$pattern」"; fi
 done
+
+# =============================================================================
+section "1b. dsh-better-sidebar 0.22.1 产物（适配性校验样本）"
+if [ -f "$LOG_DIR/embedded-js/NODE_COMPAT.js" ]; then
+  pass "内嵌适配性校验器 NODE_COMPAT.js 已生成"
+else
+  fail "内嵌适配性校验器 NODE_COMPAT.js 缺失"
+fi
+run bs-unzip-list unzip -Z1 "$BS_ZIP"
+expect_exit 0 bs-unzip-list
+grep -qF "$BS_BUNDLE/install-offline.sh" "$LOG_DIR/bs-unzip-list.log" && pass "BS zip 含 install-offline.sh" || fail "BS zip 缺 install-offline.sh"
+grep -qF "$BS_BUNDLE/install-offline.ps1" "$LOG_DIR/bs-unzip-list.log" && pass "BS zip 含 install-offline.ps1" || fail "BS zip 缺 install-offline.ps1"
+run bs-unzip-test unzip -t "$BS_ZIP"
+expect_exit 0 bs-unzip-test
+expect_in_log bs-unzip-test "No errors detected"
+run bs-unzip-extract unzip -q "$BS_ZIP" -d "$EXTRACT_ROOT"
+expect_exit 0 bs-unzip-extract
+[ -f "$BS_EX/install-offline.sh" ] && pass "BS 解包得到 $BS_EX" || fail "BS 解包失败：$BS_EX 不存在"
+chmod +x "$BS_EX/install-offline.sh"
+run bs-checksums bash -c "cd \"$BS_EX\" && sha256sum -c CHECKSUMS.txt"
+expect_exit 0 bs-checksums
+run bs-sh-syntax bash -n "$BS_EX/install-offline.sh"
+expect_exit 0 bs-sh-syntax
+
+# 产物 peer 必须是 ^0.1.7-rc.1（用户报障组合：0.22.1 + 老宿主）
+node --input-type=module -e '
+import { readFileSync } from "node:fs"
+const manifest = JSON.parse(readFileSync(process.argv[1], "utf8"))
+const peers = manifest.peerDependencies || {}
+const required = ["@deepseek-ai/dsh-session", "@deepseek-ai/dsh-llm", "@deepseek-ai/dsh-tools"]
+for (const name of required) {
+  if (peers[name] !== "^0.1.7-rc.1") {
+    console.error(name + " peer=" + peers[name] + "，期望 ^0.1.7-rc.1")
+    process.exit(1)
+  }
+}
+console.log("bs peers ok")
+' "$BS_EX/package/package.json" >"$LOG_DIR/bs-peers.log" 2>&1
+if [ $? = 0 ]; then pass "BS 产物 peer：dsh-session/llm/tools 均为 ^0.1.7-rc.1"; else fail "BS 产物 peer 检查失败：$(cat "$LOG_DIR/bs-peers.log")"; fi
+
+# 包内 README「适配性校验 / missing export」小节
+for pattern in "适配性校验" "SessionLogOffset" "dsh-better-sidebar@0.13.1" "dsh-better-sidebar@0.22.1" "dsh-better-sidebar@0.28.x" "--force" "missing export"; do
+  if grep -qF -- "$pattern" "$BS_EX/README.md"; then pass "BS README 覆盖「$pattern」"; else fail "BS README 缺少「$pattern」"; fi
+done
+# 安装器文本里的新参数与新小节
+for pattern in "--force" "适配性校验" "SessionLogOffset"; do
+  if grep -qF -- "$pattern" "$BS_EX/install-offline.sh"; then pass "BS install-offline.sh 含「$pattern」"; else fail "BS install-offline.sh 缺「$pattern」"; fi
+done
+grep -qF -- "-Force" "$BS_EX/install-offline.ps1" && pass "BS install-offline.ps1 含「-Force」" || fail "BS install-offline.ps1 缺「-Force」"
+grep -qF -- "适配性校验" "$BS_EX/install-offline.ps1" && pass "BS install-offline.ps1 含「适配性校验」" || fail "BS install-offline.ps1 缺「适配性校验」"
+
+BOM_BS="$(head -c 3 "$BS_EX/install-offline.ps1" | od -An -tx1 | tr -d ' \n')"
+if [ "$BOM_BS" = "efbbbf" ]; then pass "BS install-offline.ps1 带 UTF-8 BOM"; else fail "BS install-offline.ps1 缺 UTF-8 BOM（$BOM_BS）"; fi
+if [ -n "$PWSH" ]; then
+  run bs-ps-ast "$PWSH" -NoProfile -File "$ROOT/test/installer/ps-ast-check.ps1" "$BS_EX/install-offline.ps1"
+  expect_exit 0 bs-ps-ast
+  expect_in_log bs-ps-ast "AST OK"
+else
+  fail "跳过 BS install-offline.ps1 AST（无便携 pwsh）"
+fi
 
 # =============================================================================
 section "2. 场景 A：正常 Node v24，全新 DSH_HOME"
@@ -487,6 +597,166 @@ if [ -n "$PWSH" ]; then
   expect_in_log ps-fake-install "指定的 dsh 安装目录不是标准 @deepseek-ai/dsh 包"
 else
   fail "跳过 PowerShell 行为测试（未找到便携 pwsh）"
+fi
+
+# =============================================================================
+section "7. 适配性校验（用户真实报障：better-sidebar 0.22.1 装到老宿主）"
+# 事实：dsh-better-sidebar@0.22.1 的 @deepseek-ai/dsh-* peer 全是 ^0.1.7-rc.1；
+# HOST_PINNED=0.1.0-rc.7（没有 SessionLogOffset，强装会整棵插件树加载失败），
+# DSH_REAL=0.2.1-rc.2（满足 ^0.1.7-rc.1）。
+BS_SH="$BS_EX/install-offline.sh"
+
+# 7a. 默认拒绝：exit 2 + 中文版本对照提示 + 目标目录零写入
+HOME_REJECT="$HOMES/compat-reject"
+run bs-reject env -u DSH_HOME -u DSH_PROFILE_DIR -u DSH_INSTALL_DIR -u NODE_BIN -u DSH_PROFILE \
+  bash "$BS_SH" --dsh-home "$HOME_REJECT" --dsh-install "$HOST_PINNED"
+expect_exit 2 bs-reject
+expect_in_log bs-reject "插件与宿主不匹配"
+expect_in_log bs-reject "该插件版本声明需要 ^0.1.7-rc.1"
+expect_in_log bs-reject "检测到宿主 DSH 0.1.0-rc.7"
+expect_in_log bs-reject "dsh-better-sidebar 0.13.1"
+expect_in_log bs-reject "0.22.1"
+expect_in_log bs-reject "0.28.x"
+expect_in_log bs-reject "SessionLogOffset"
+expect_in_log bs-reject "--force"
+expect_not_in_log bs-reject "安装完成"
+expect_no_file "$HOME_REJECT"
+
+# 7b. 通过：0.2.1-rc.2 满足 ^0.1.7-rc.1 -> 信息通过 + 真正安装
+HOME_PASS="$HOMES/compat-pass"
+run bs-pass env -u DSH_HOME -u DSH_PROFILE_DIR -u DSH_INSTALL_DIR -u NODE_BIN -u DSH_PROFILE \
+  bash "$BS_SH" --dsh-home "$HOME_PASS" --dsh-install "$DSH_REAL"
+expect_exit 0 bs-pass
+expect_in_log bs-pass "适配性校验：通过"
+expect_in_log bs-pass "宿主 0.2.1-rc.2"
+expect_in_log bs-pass "安装完成：dsh-better-sidebar 0.22.1"
+expect_file "$HOME_PASS/profiles/web/node_modules/dsh-better-sidebar/package.json"
+expect_bundle present "$HOME_PASS/profiles/web/package.json" dsh-better-sidebar bs-pass
+
+# 7c. --force：warning + 安装成功
+HOME_FORCE="$HOMES/compat-force"
+run bs-force env -u DSH_HOME -u DSH_PROFILE_DIR -u DSH_INSTALL_DIR -u NODE_BIN -u DSH_PROFILE \
+  bash "$BS_SH" --dsh-home "$HOME_FORCE" --dsh-install "$HOST_PINNED" --force
+expect_exit 0 bs-force
+expect_in_log bs-force "已指定 --force"
+expect_in_log bs-force "安装完成：dsh-better-sidebar 0.22.1"
+expect_file "$HOME_FORCE/profiles/web/node_modules/dsh-better-sidebar/package.json"
+expect_bundle present "$HOME_FORCE/profiles/web/package.json" dsh-better-sidebar bs-force
+
+# 7d. --dry-run：展示校验结果、零写入、不中止
+HOME_DRY="$HOMES/compat-dry"
+run bs-dryrun env -u DSH_HOME -u DSH_PROFILE_DIR -u DSH_INSTALL_DIR -u NODE_BIN -u DSH_PROFILE \
+  bash "$BS_SH" --dsh-home "$HOME_DRY" --dsh-install "$HOST_PINNED" --dry-run
+expect_exit 0 bs-dryrun
+expect_in_log bs-dryrun "适配性校验未通过"
+expect_in_log bs-dryrun "正式安装会中止"
+expect_in_log bs-dryrun "dsh-better-sidebar 0.13.1"
+expect_not_in_log bs-dryrun "安装完成"
+expect_no_file "$HOME_DRY"
+
+# 7e. 没有 DSH peer 的插件（dsh-unlag）-> 跳过校验
+run bs-skip env -u DSH_HOME -u DSH_PROFILE_DIR -u DSH_INSTALL_DIR -u NODE_BIN -u DSH_PROFILE \
+  bash "$EX/install-offline.sh" --dsh-home "$HOMES/compat-skip" --dsh-install "$DSH_REAL" --dry-run
+expect_exit 0 bs-skip
+expect_in_log bs-skip "插件未声明 @deepseek-ai/dsh* peer 依赖，跳过适配性校验"
+expect_no_file "$HOMES/compat-skip"
+
+# 7f. 宿主不可探测（HOME 隔离 + PATH 无 dsh + 无 fallback）-> warning 后继续安装
+HOME_UNKNOWN="$HOMES/compat-unknown"
+run bs-unknown env -u DSH_HOME -u DSH_PROFILE_DIR -u DSH_INSTALL_DIR -u NODE_BIN -u DSH_PROFILE \
+  HOME="$C_HOME" PATH="/usr/bin:/bin" \
+  bash "$BS_SH" --dsh-home "$HOME_UNKNOWN" --node "$NODE_NOW"
+expect_exit 0 bs-unknown
+expect_in_log bs-unknown "无法校验插件与宿主适配性（未检测到宿主 DSH 版本）"
+expect_in_log bs-unknown "插件声明的 DSH peer 范围：^0.1.7-rc.1"
+expect_in_log bs-unknown "安装完成：dsh-better-sidebar 0.22.1"
+expect_file "$HOME_UNKNOWN/profiles/web/node_modules/dsh-better-sidebar/package.json"
+
+# 7g. --uninstall 不受影响：宿主不匹配也不得 exit 2
+run bs-uninstall env -u DSH_HOME -u DSH_PROFILE_DIR -u DSH_INSTALL_DIR -u NODE_BIN -u DSH_PROFILE \
+  bash "$BS_SH" --uninstall --dsh-home "$HOME_PASS" --dsh-install "$HOST_PINNED"
+expect_exit 0 bs-uninstall
+expect_not_in_log bs-uninstall "插件与宿主不匹配"
+expect_no_file "$HOME_PASS/profiles/web/node_modules/dsh-better-sidebar"
+expect_bundle absent "$HOME_PASS/profiles/web/package.json" dsh-better-sidebar bs-uninstall
+
+# 7h. --help 文档：--force 与「适配性校验 / SessionLogOffset」说明
+run bs-help bash "$BS_SH" --help
+expect_exit 0 bs-help
+expect_in_log bs-help "--force"
+expect_in_log bs-help "适配性校验"
+expect_in_log bs-help "SessionLogOffset"
+
+# 7i. Node 8.17.0（旧 Node）：拒绝 / 通过两条，验证新 ES5 helper 兼容
+if [ -n "$NODE8" ]; then
+  run bs-node8-reject env -u DSH_HOME -u DSH_PROFILE_DIR -u DSH_INSTALL_DIR -u DSH_PROFILE \
+    NODE_BIN="$NODE8" bash "$BS_SH" --dsh-home "$HOMES/compat-node8-reject" --dsh-install "$HOST_PINNED"
+  expect_exit 2 bs-node8-reject
+  expect_in_log bs-node8-reject "插件与宿主不匹配"
+  expect_in_log bs-node8-reject "SessionLogOffset"
+  expect_no_file "$HOMES/compat-node8-reject"
+
+  run bs-node8-pass env -u DSH_HOME -u DSH_PROFILE_DIR -u DSH_INSTALL_DIR -u DSH_PROFILE \
+    NODE_BIN="$NODE8" bash "$BS_SH" --dsh-home "$HOMES/compat-node8-pass" --dsh-install "$DSH_REAL"
+  expect_exit 0 bs-node8-pass
+  expect_in_log bs-node8-pass "适配性校验：通过"
+  expect_in_log bs-node8-pass "安装完成：dsh-better-sidebar 0.22.1"
+  expect_file "$HOMES/compat-node8-pass/profiles/web/node_modules/dsh-better-sidebar/package.json"
+  expect_bundle present "$HOMES/compat-node8-pass/profiles/web/package.json" dsh-better-sidebar bs-node8-pass
+else
+  fail "跳过 Node8 适配性校验用例（node@8.17.0 不可用）"
+fi
+
+# =============================================================================
+section "8. PowerShell 版适配性校验（-DryRun / 拒绝 exit 2 / -Force / 跳过）"
+if [ -n "$PWSH" ]; then
+  BS_PS1="$BS_EX/install-offline.ps1"
+
+  run bs-ps-dryrun env -u DSH_PROFILE_DIR -u DSH_HOME -u DSH_INSTALL_DIR -u NODE_BIN -u DSH_PROFILE \
+    "$PWSH" -NoProfile -File "$BS_PS1" -DshHome "$HOMES/ps-compat-dry" -DshInstall "$HOST_PINNED" -DryRun
+  expect_exit 0 bs-ps-dryrun
+  expect_in_log bs-ps-dryrun "适配性校验未通过"
+  expect_in_log bs-ps-dryrun "正式安装会中止"
+  expect_in_log bs-ps-dryrun "dsh-better-sidebar 0.13.1"
+  expect_no_file "$HOMES/ps-compat-dry"
+
+  run bs-ps-reject env -u DSH_PROFILE_DIR -u DSH_HOME -u DSH_INSTALL_DIR -u NODE_BIN -u DSH_PROFILE \
+    "$PWSH" -NoProfile -File "$BS_PS1" -DshHome "$HOMES/ps-compat-reject" -DshInstall "$HOST_PINNED"
+  expect_exit 2 bs-ps-reject
+  expect_in_log bs-ps-reject "插件与宿主不匹配"
+  expect_in_log bs-ps-reject "0.13.1"
+  expect_in_log bs-ps-reject "SessionLogOffset"
+  expect_no_file "$HOMES/ps-compat-reject"
+
+  run bs-ps-pass env -u DSH_PROFILE_DIR -u DSH_HOME -u DSH_INSTALL_DIR -u NODE_BIN -u DSH_PROFILE \
+    "$PWSH" -NoProfile -File "$BS_PS1" -DshHome "$HOMES/ps-compat-pass" -DshInstall "$DSH_REAL"
+  expect_exit 0 bs-ps-pass
+  expect_in_log bs-ps-pass "适配性校验：通过"
+  expect_in_log bs-ps-pass "安装完成：dsh-better-sidebar 0.22.1"
+  expect_file "$HOMES/ps-compat-pass/profiles/web/node_modules/dsh-better-sidebar/package.json"
+
+  run bs-ps-force env -u DSH_PROFILE_DIR -u DSH_HOME -u DSH_INSTALL_DIR -u NODE_BIN -u DSH_PROFILE \
+    "$PWSH" -NoProfile -File "$BS_PS1" -DshHome "$HOMES/ps-compat-force" -DshInstall "$HOST_PINNED" -Force
+  expect_exit 0 bs-ps-force
+  expect_in_log bs-ps-force "已指定 -Force"
+  expect_in_log bs-ps-force "安装完成：dsh-better-sidebar 0.22.1"
+  expect_file "$HOMES/ps-compat-force/profiles/web/node_modules/dsh-better-sidebar/package.json"
+
+  run bs-ps-skip env -u DSH_PROFILE_DIR -u DSH_HOME -u DSH_INSTALL_DIR -u NODE_BIN -u DSH_PROFILE \
+    "$PWSH" -NoProfile -File "$EX/install-offline.ps1" -DshHome "$HOMES/ps-compat-skip" -DshInstall "$DSH_REAL" -DryRun
+  expect_exit 0 bs-ps-skip
+  expect_in_log bs-ps-skip "插件未声明 @deepseek-ai/dsh* peer 依赖，跳过适配性校验"
+  expect_no_file "$HOMES/ps-compat-skip"
+
+  run bs-ps-unknown env -u DSH_PROFILE_DIR -u DSH_HOME -u DSH_INSTALL_DIR -u NODE_BIN -u DSH_PROFILE \
+    HOME="$C_HOME" PATH="/usr/bin:/bin" \
+    "$PWSH" -NoProfile -File "$BS_PS1" -DshHome "$HOMES/ps-compat-unknown"
+  expect_exit 0 bs-ps-unknown
+  expect_in_log bs-ps-unknown "无法校验插件与宿主适配性（未检测到宿主 DSH 版本）"
+  expect_in_log bs-ps-unknown "安装完成：dsh-better-sidebar 0.22.1"
+  expect_file "$HOMES/ps-compat-unknown/profiles/web/node_modules/dsh-better-sidebar/package.json"
+else
+  fail "跳过 PowerShell 适配性校验用例（未找到便携 pwsh）"
 fi
 
 # =============================================================================

@@ -70,6 +70,23 @@ dsh-<plugin>-offline-<version>-dsh-<targetDshVersion>/
 - 生成的离线安装器**不依赖 `dsh` 命令**：可用 `--profile-dir <目录>` / `DSH_PROFILE_DIR` 直接指定 profile，`--dsh-install <目录>` 提供宿主安装目录做版本校验，`--node <path>` 指定 Node 可执行文件。
 - 安装器内嵌帮助脚本兼容旧 Node（ES5；Node 8.17 实测可用），不会因系统 `node` 较旧而崩溃；DSH 宿主本身仍建议使用较新 Node。
 
+## 启动报错「does not provide an export named 'SessionLogOffset'」（插件与宿主版本不匹配）
+
+这是**插件版本与目标宿主 DSH 版本不匹配**：`dsh-better-sidebar@0.22.x/0.24.x` 需要 `@deepseek-ai/dsh-session >= 0.1.7-rc.1`（`SessionLogOffset` 从该版本才有），装到更老的宿主（0.1.0-rc.7/rc.8、0.1.1-rc.x 等）就会在启动时报缺少导出，并导致整棵插件树加载失败。
+
+- 处理：先卸载这个版本（`bash install-offline.sh --uninstall --profile-dir <目标 profile>`，或从 `profiles/<name>/package.json` 的 `dsh.profile.bundles` 移除该插件），再用「历史版本」通道按**目标机实际的 DSH 版本**打包匹配的插件版本：
+
+  | 目标 DSH 版本 | dsh-better-sidebar 建议版本 |
+  |---|---|
+  | 0.1.0-rc.7 / 0.1.0-rc.8 | 0.13.1（或 0.12.x） |
+  | 0.1.1-rc.x ~ 0.1.6-rc.x | 0.14.x ~ 0.21.x 中 peer 匹配者 |
+  | 0.1.7-rc.x | 0.22.1 |
+  | 0.2.0-rc.x | 0.26.x |
+  | 0.2.1-rc.x | 0.28.x |
+
+- v0.1.8 起安装器会**安装前做适配性校验**：探测到宿主版本且不满足插件声明的 `@deepseek-ai/dsh*` peer 范围时默认中止并给出对照建议（`--force` 可强制安装，风险自负）；探测不到宿主版本（魔改机）只警告。
+- 本地打包时若当前安装的插件版本与当前宿主版本不匹配，结果 `warnings` 也会明确指出。
+
 ## 已知限制与说明
 
 - **两种打包通道的语义不同**：

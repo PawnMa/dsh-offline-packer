@@ -1,4 +1,4 @@
-# 交付说明：dsh-offline-packer 0.1.7
+# 交付说明：dsh-offline-packer 0.1.8
 
 > 一个 DSH web 插件：把当前宿主已装的插件变成可直接拷到离线电脑的安装包，并支持按历史 DSH 适配版本打包。
 > 已验证宿主：`@deepseek-ai/dsh` **0.2.1-rc.2**；历史目标宿主已验证：`0.1.0-rc.7`。
@@ -7,7 +7,7 @@
 
 | 路径 | 说明 |
 |---|---|
-| `dsh-offline-packer-0.1.7.tgz` | 可安装插件包（约 90 KB，纯 JS 无运行时依赖；sha256 `313a51f2…1e02b82f0`） |
+| `dsh-offline-packer-0.1.8.tgz` | 可安装插件包（约 100 KB，纯 JS 无运行时依赖；sha256 `3aca2c34…62774d3`） |
 | `index.js` / `client.js` / `lib/*.mjs` | 插件源码（服务端路由 / 浏览器设置页 / 打包引擎） |
 | `README.md` | 用户文档：安装、使用、已知限制 |
 | `ARCHITECTURE.md` | 架构与模块接口契约 |
@@ -20,8 +20,8 @@
 已通过官方通道装入用户当前 profile：
 
 ```bash
-cp dsh-offline-packer-0.1.7.tgz ~/.dsh/packages/
-DSH_HOME=~/.dsh dsh plugin --profile web add ~/.dsh/packages/dsh-offline-packer-0.1.7.tgz
+cp dsh-offline-packer-0.1.8.tgz ~/.dsh/packages/
+DSH_HOME=~/.dsh dsh plugin --profile web add ~/.dsh/packages/dsh-offline-packer-0.1.8.tgz
 ```
 
 - profile：`~/.dsh/profiles/web`（dependencies 13 项 / bundles 16 项，含 `dsh-offline-packer`）
@@ -55,3 +55,4 @@ DSH_HOME=~/.dsh dsh plugin --profile web add ~/.dsh/packages/dsh-offline-packer-
 - PowerShell 安装脚本为 5.1 兼容语法，本轮未在真实 Windows 上执行（建议 Windows 用户冒烟一次）。
 - 支持魔改/非标准 DSH：页面可手动指定宿主安装目录/版本；生成的安装器不依赖 `dsh` 命令（`--profile-dir` / `DSH_PROFILE_DIR` / `--dsh-install` / `--node`），内嵌安装脚本兼容旧 Node（Node 8.17 实测可用），DSH 宿主本身仍建议较新 Node。
 - 「高级打包选项」可按需多内嵌：宿主运行时依赖 / 插件全部声明依赖 / 额外指定包；结果面板列出实际内嵌清单（体积与单例风险自负）。
+- 安装器会做**适配性校验**：插件声明的 `@deepseek-ai/dsh*` peer 范围与探测到的宿主版本不匹配时默认中止（`--force` 可跳过），避免 `SessionLogOffset` 这类「插件装到更老 DSH 上导致启动失败」的问题；本地打包也会预检并在 warnings 中提示版本不匹配。

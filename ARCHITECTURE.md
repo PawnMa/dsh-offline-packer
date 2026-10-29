@@ -143,6 +143,8 @@ renderInstallers({ pluginName, version, targetDshVersion, hasVendoredDeps, mode 
 renderReadme({...}) -> string
 renderVersionsText({...}) -> string
 ```
+生成的安装器额外契约（v0.1.8 起）：
+- **适配性校验**：读取插件 `peerDependencies` 中所有 `@deepseek-ai/dsh*` 范围，用 ES5 semver 匹配器对比探测到的宿主版本；不匹配默认中止（exit 2，`--force`/`-Force` 跳过并 warning）；宿主未知仅 warning；无 DSH peer 跳过；`--dry-run` 展示校验结果。
 生成的安装器额外契约（v0.1.5 起）：
 - bash 参数 `--dsh-home/--profile/--profile-dir/--node/--dsh-install/--plugin-src/--uninstall/--dry-run`，环境变量 `DSH_PROFILE_DIR`/`NODE_BIN`/`DSH_INSTALL_DIR`；ps1 对应 `-ProfileDir/-Node/-DshInstall`。
 - profile 定位优先级（**显式 CLI 优先于环境变量**）：`--profile-dir > --dsh-home+--profile > DSH_PROFILE_DIR > $DSH_HOME+--profile > ~/.dsh/profiles/web`；PS 同款 `-ProfileDir > -DshHome+-Profile > $env:DSH_PROFILE_DIR > $env:DSH_HOME+Profile > ~/.dsh/profiles/<profile>`。环境变量推导目标与最终目标不一致时必须打印醒目 `[警告]`（含 unset 建议），一致时不告警。
