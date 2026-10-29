@@ -59,6 +59,9 @@ dsh-<plugin>-offline-<version>-dsh-<targetDshVersion>/
 | 内嵌全部声明依赖 | 把插件 `package.json` 的 `dependencies`/`optionalDependencies` 全部内嵌（完整依赖树） |
 | 额外内嵌包 | 逗号/空格分隔的额外包名（本地按已装版本内嵌，不支持 `name@version`） |
 
+> 这些选项**只影响「打包离线版」（本地通道）**；「历史版本」通道（下载并打包）本来就内嵌该版本声明的完整依赖树，勾选与否产物一致。
+> 若插件服务端没有任何外部 import、或分析到的依赖都不是宿主提供的，勾选第一项不会改变产物——结果 `warnings` 会明确提示「本次没有因此多内嵌任何包」。
+
 结果面板会列出实际内嵌的包（`name@version`）。
 
 ## 魔改 / 非标准 DSH（没有 dsh 命令）

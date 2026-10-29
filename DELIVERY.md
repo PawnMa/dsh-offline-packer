@@ -1,4 +1,4 @@
-# 交付说明：dsh-offline-packer 0.1.5
+# 交付说明：dsh-offline-packer 0.1.7
 
 > 一个 DSH web 插件：把当前宿主已装的插件变成可直接拷到离线电脑的安装包，并支持按历史 DSH 适配版本打包。
 > 已验证宿主：`@deepseek-ai/dsh` **0.2.1-rc.2**；历史目标宿主已验证：`0.1.0-rc.7`。
@@ -7,7 +7,7 @@
 
 | 路径 | 说明 |
 |---|---|
-| `dsh-offline-packer-0.1.5.tgz` | 可安装插件包（约 90 KB，纯 JS 无运行时依赖；sha256 `ad4b7cf8…d7ab19eb`） |
+| `dsh-offline-packer-0.1.7.tgz` | 可安装插件包（约 90 KB，纯 JS 无运行时依赖；sha256 `313a51f2…1e02b82f0`） |
 | `index.js` / `client.js` / `lib/*.mjs` | 插件源码（服务端路由 / 浏览器设置页 / 打包引擎） |
 | `README.md` | 用户文档：安装、使用、已知限制 |
 | `ARCHITECTURE.md` | 架构与模块接口契约 |
@@ -20,8 +20,8 @@
 已通过官方通道装入用户当前 profile：
 
 ```bash
-cp dsh-offline-packer-0.1.5.tgz ~/.dsh/packages/
-DSH_HOME=~/.dsh dsh plugin --profile web add ~/.dsh/packages/dsh-offline-packer-0.1.5.tgz
+cp dsh-offline-packer-0.1.7.tgz ~/.dsh/packages/
+DSH_HOME=~/.dsh dsh plugin --profile web add ~/.dsh/packages/dsh-offline-packer-0.1.7.tgz
 ```
 
 - profile：`~/.dsh/profiles/web`（dependencies 13 项 / bundles 16 项，含 `dsh-offline-packer`）

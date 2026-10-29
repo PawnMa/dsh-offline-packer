@@ -143,6 +143,8 @@ window.__ModuleLoader__.load({
           packagingPercent: (n) => `打包中… ${n}%`,
           advancedBlock: '高级打包选项',
           advancedHint: '按需多内嵌依赖：只在目标机缺包时才打开，产物会变大。',
+          advancedScopeNote: '仅影响「打包离线版」（本地通道）；「历史版本」通道（下载并打包）本身已内嵌该版本声明的完整依赖树，不使用这些选项。',
+          embedNotApplicable: '历史版本通道：已内嵌该版本声明的完整依赖树（含前端库），高级打包选项不适用于此通道。',
           expandOptions: '展开',
           collapseOptions: '收起',
           advancedSummary: (parts) => (parts.length === 0 ? '默认（只内嵌运行时必需的缺失依赖）' : `已启用：${parts.join(' · ')}`),
@@ -282,6 +284,8 @@ window.__ModuleLoader__.load({
           packagingPercent: (n) => `Packing… ${n}%`,
           advancedBlock: 'Advanced packaging options',
           advancedHint: 'Embed more dependencies on demand: use it only when the target machine lacks packages; the package gets bigger.',
+          advancedScopeNote: 'Applies to "Build offline package" (the local channel) only; version history already embeds that version\'s full declared dependency tree and ignores these options.',
+          embedNotApplicable: 'Version history already embeds that version\'s full declared dependency tree (including browser libraries); advanced packaging options do not apply to this channel.',
           expandOptions: 'Show',
           collapseOptions: 'Hide',
           advancedSummary: (parts) => (parts.length === 0 ? 'Default (embed only the missing runtime dependencies)' : `Enabled: ${parts.join(' · ')}`),
@@ -952,6 +956,14 @@ window.__ModuleLoader__.load({
 
         props.fetchError !== null
           ? h(ErrorBanner, { error: props.fetchError, testid: 'offline-packer-job-error' })
+          : null,
+
+        job.kind === 'registry'
+          ? h(
+              'div',
+              { style: S.note, 'data-testid': 'offline-packer-embed-not-applicable' },
+              COPY.embedNotApplicable,
+            )
           : null,
 
         status === 'error' || jobError !== null
@@ -2096,6 +2108,7 @@ window.__ModuleLoader__.load({
                 ),
               )
             : h('div', { style: S.note }, COPY.advancedHint),
+          h('div', { style: S.optionHint, 'data-testid': 'offline-packer-advanced-scope' }, COPY.advancedScopeNote),
         ),
 
         h(
