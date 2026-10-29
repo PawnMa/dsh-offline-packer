@@ -60,7 +60,7 @@
     {
       "name": "plugin count attribute is readable",
       "passed": true,
-      "detail": "19"
+      "detail": "1"
     },
     {
       "name": "plugin rows rendered",
@@ -95,7 +95,7 @@
     {
       "name": "history panel shows versions or a readable error",
       "passed": true,
-      "detail": "rows=29 alerts=0"
+      "detail": "rows=0 alerts=1"
     },
     {
       "name": "page still rendered after refresh",
@@ -125,12 +125,12 @@
     {
       "name": "scan-source switch loads the user home",
       "passed": true,
-      "detail": "plugins=17"
+      "detail": "plugins=14"
     },
     {
       "name": "plugin source values are labelled lines",
       "passed": true,
-      "detail": "source lines=12"
+      "detail": "source lines=13"
     },
     {
       "name": "source line carries a value",
@@ -148,7 +148,7 @@
       "detail": ""
     },
     {
-      "name": "no console errors",
+      "name": "no console errors outside this plugin API",
       "passed": true,
       "detail": ""
     },
@@ -159,5 +159,10 @@
     }
   ],
   "pageErrors": [],
-  "consoleErrors": []
+  "consoleErrors": [
+    {
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "url": "http://127.0.0.1:3081/dsh-offline-packer/api/matrix?plugin=dsh-offline-packer"
+    }
+  ]
 }

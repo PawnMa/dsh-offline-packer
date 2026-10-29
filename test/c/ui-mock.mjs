@@ -96,8 +96,8 @@ const PLUGINS = [
 const MATRIX = {
   plugin: 'dsh-better-sidebar',
   versions: [
-    { version: '0.13.1', published: '2026-09-01T08:00:00.000Z', dshPeers: ['^0.1.0-rc.7'], compatibleDsh: ['0.1.0-rc.7', '0.1.0-rc.8'] },
-    { version: '0.12.0', published: '2026-08-01T08:00:00.000Z', dshPeers: ['^0.1.0-rc.5'], compatibleDsh: ['0.1.0-rc.5'] },
+    { version: '0.13.1', published: '2026-09-01T08:00:00.000Z', dshPeers: ['^0.2.1-rc.1'], compatibleDsh: ['0.2.1-rc.1', DSH_VERSION] },
+    { version: '0.12.0', published: '2026-08-01T08:00:00.000Z', dshPeers: ['^0.2.1-rc.1'], compatibleDsh: [DSH_VERSION] },
     { version: '0.11.0', published: '2026-07-01T08:00:00.000Z', dshPeers: [], compatibleDsh: [] },
   ],
   dshVersions: [
@@ -322,8 +322,9 @@ try {
   check('job reaches done state', (await page.textContent('[data-testid="offline-packer-job-status"]'))?.trim() === '已完成')
   check('result panel rendered', (await page.locator('[data-testid="offline-packer-result"]').count()) === 1)
   const href = await page.getAttribute('[data-testid="offline-packer-download"]', 'href')
-  const expected = `/dsh-offline-packer/api/download?name=${encodeURIComponent(RESULT.zipName)}`
-  check('download link points at the produced zip', href === expected, String(href))
+  const expectedName = `/dsh-offline-packer/api/download?name=${encodeURIComponent(RESULT.zipName)}`
+  // The newer job panel appends `&outputRoot=` when a custom output directory is in play.
+  check('download link points at the produced zip', typeof href === 'string' && href.startsWith(expectedName), String(href))
   check('result target shown', (await page.textContent('[data-testid="offline-packer-result-target"]'))?.trim() === DSH_VERSION)
   check('result zip name shown', (await page.textContent('[data-testid="offline-packer-result-zipname"]'))?.trim() === RESULT.zipName)
   await page.locator('[data-testid="offline-packer-result"]').scrollIntoViewIfNeeded()

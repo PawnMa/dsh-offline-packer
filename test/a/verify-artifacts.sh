@@ -13,6 +13,22 @@ OUT="$ROOT/test/out-a"
 FAILURES=0
 CHECKS=0
 
+# Safety net: this script must never touch the real user profile. The generated
+# installers honour $DSH_PROFILE_DIR/$DSH_HOME from the environment, and this
+# agent shell inherits them, so every installer call below runs with those
+# variables stripped and HOME/DSH_HOME pointed into the throwaway work dir.
+REAL_MANIFEST="/home/fc/.dsh/profiles/web/package.json"
+REAL_MODULES="/home/fc/.dsh/profiles/web/node_modules"
+real_fingerprint() {
+  {
+    sha256sum "$REAL_MANIFEST" 2>/dev/null || true
+    ls -1 "$REAL_MODULES" 2>/dev/null | sort | sha256sum || true
+  } | sha256sum | cut -d' ' -f1
+}
+REAL_BEFORE="$(real_fingerprint)"
+
+clean_env() { env -u DSH_PROFILE_DIR -u DSH_HOME -u DSH_PROFILE "$@"; }
+
 pass() { CHECKS=$((CHECKS + 1)); printf 'PASS %s\n' "$*"; }
 fail() { CHECKS=$((CHECKS + 1)); FAILURES=$((FAILURES + 1)); printf 'FAIL %s\n' "$*" >&2; }
 section() { printf '\n=== %s ===\n' "$*"; }
@@ -82,23 +98,32 @@ NODE
   run 'install-offline.sh 在解压目录中可执行' test -x "$STAGE/install-offline.sh"
 
   FAKE_HOME="$WORK/fake-home"
-  if (cd "$STAGE" && ./install-offline.sh --dry-run --dsh-home "$FAKE_HOME" >/dev/null 2>&1); then
+  SANDBOX_HOME="$WORK/sandbox-home"
+  FAKE_PROFILE="$WORK/profile"
+  PROFILE_ARGS=(--dsh-home "$FAKE_HOME" --profile web)
+  if grep -q -- '--profile-dir' "$STAGE/install-offline.sh"; then
+    PROFILE_ARGS=(--profile-dir "$FAKE_PROFILE")
+  fi
+
+  if (cd "$STAGE" && clean_env HOME="$SANDBOX_HOME" ./install-offline.sh --dry-run "${PROFILE_ARGS[@]}" >/dev/null 2>&1); then
     pass 'install-offline.sh --dry-run'
   else
     fail 'install-offline.sh --dry-run'
   fi
-  if [ -e "$FAKE_HOME" ]; then fail '--dry-run 不应创建任何文件'; else pass '--dry-run 零写入'; fi
+  if [ -e "$FAKE_HOME" ] || [ -e "$FAKE_PROFILE" ] || [ -e "$SANDBOX_HOME" ]; then fail '--dry-run 不应创建任何文件'; else pass '--dry-run 零写入'; fi
 
-  if (cd "$STAGE" && ./install-offline.sh --dsh-home "$FAKE_HOME" >/dev/null 2>&1); then
+  if (cd "$STAGE" && clean_env HOME="$SANDBOX_HOME" ./install-offline.sh "${PROFILE_ARGS[@]}" >/dev/null 2>&1); then
     pass 'install-offline.sh 正式安装'
   else
     fail 'install-offline.sh 正式安装'
   fi
 
   PLUGIN_NAME="$(basename "$STAGE" | sed -E 's/-offline-.*$//')"
-  PLUGIN_DIR="$FAKE_HOME/profiles/web/node_modules/$PLUGIN_NAME"
+  INSTALLED_PROFILE="$FAKE_HOME/profiles/web"
+  [ -d "$FAKE_PROFILE" ] && INSTALLED_PROFILE="$FAKE_PROFILE"
+  PLUGIN_DIR="$INSTALLED_PROFILE/node_modules/$PLUGIN_NAME"
   if [ -f "$PLUGIN_DIR/package.json" ]; then pass "安装后插件目录存在（$PLUGIN_NAME）"; else fail "安装后插件目录存在（$PLUGIN_NAME）"; fi
-  if node - "$FAKE_HOME/profiles/web/package.json" "$PLUGIN_NAME" <<'NODE'
+  if node - "$INSTALLED_PROFILE/package.json" "$PLUGIN_NAME" <<'NODE'
 const fs = require('node:fs')
 const manifest = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const bundles = (manifest.dsh && manifest.dsh.profile && manifest.dsh.profile.bundles) || []
@@ -106,18 +131,18 @@ if (!Array.isArray(bundles) || !bundles.includes(process.argv[3])) process.exit(
 NODE
   then pass '安装后 dsh.profile.bundles 已包含插件'; else fail '安装后 dsh.profile.bundles 已包含插件'; fi
 
-  if (cd "$STAGE" && ./install-offline.sh --dsh-home "$FAKE_HOME" >/dev/null 2>&1); then
+  if (cd "$STAGE" && clean_env HOME="$SANDBOX_HOME" ./install-offline.sh "${PROFILE_ARGS[@]}" >/dev/null 2>&1); then
     pass '重复安装幂等'
   else
     fail '重复安装幂等'
   fi
 
-  if (cd "$STAGE" && ./install-offline.sh --uninstall --dsh-home "$FAKE_HOME" >/dev/null 2>&1); then
+  if (cd "$STAGE" && clean_env HOME="$SANDBOX_HOME" ./install-offline.sh --uninstall "${PROFILE_ARGS[@]}" >/dev/null 2>&1); then
     pass 'install-offline.sh --uninstall'
   else
     fail 'install-offline.sh --uninstall'
   fi
-  if node - "$FAKE_HOME/profiles/web/package.json" "$PLUGIN_NAME" <<'NODE'
+  if node - "$INSTALLED_PROFILE/package.json" "$PLUGIN_NAME" <<'NODE'
 const fs = require('node:fs')
 const manifest = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const bundles = (manifest.dsh && manifest.dsh.profile && manifest.dsh.profile.bundles) || []
@@ -129,6 +154,9 @@ NODE
   rm -rf "$WORK"
   trap - EXIT
 done
+
+REAL_AFTER="$(real_fingerprint)"
+if [ "$REAL_BEFORE" = "$REAL_AFTER" ]; then pass '未触碰用户真实 profile（/home/fc/.dsh 指纹不变）'; else fail '用户真实 profile 被修改（/home/fc/.dsh 指纹变化）'; fi
 
 printf '\n==== 汇总 ====\n检查 %d 项，失败 %d 项\n' "$CHECKS" "$FAILURES"
 [ "$FAILURES" -eq 0 ] || exit 1

@@ -55,6 +55,32 @@ recovery, profile-dir mismatch note, zero page errors.
 
 Screenshots: `screenshot-mock-*.png`.
 
+## 3. `ui-embed-mock.mjs` — phase-2 options with mocked envelopes
+
+```bash
+node test/c/ui-embed-mock.mjs 'http://127.0.0.1:3081/?token=<token>' zh-CN   # also en-US
+```
+
+Intercepts only this plugin's API. The mocked state answers `host.source: 'unknown'` until
+an override arrives (then `'override'`), which is the modded-host case the panel exists for.
+Proves: advanced panel collapsed by default, the three embed controls + risk/hint copy,
+localStorage persistence of `dsh-offline-packer:embed`, `dsh-offline-packer:advanced-open`,
+`dsh-offline-packer:host-override`, `dsh-offline-packer:host-override-open`; the override
+query on `/api/state`; both packaging bodies (`embed` + `dshInstallDir`/`dshVersion` on local,
+host override but no `embed` on registry); the improved vendored line (list and empty text);
+reload restoring every choice; zero page errors. Screenshot: `screenshot-embed-mock.png`.
+
+## 4. `ui-embed-real.mjs` — phase-2 options on the real node half
+
+```bash
+node test/c/ui-embed-real.mjs 'http://127.0.0.1:3081/?token=<token>' zh-CN
+```
+
+Real host: both panels render, `host.source` is a known value, the manual override is applied
+with the auto-detected install dir/version and the server answers `source=override`, one real
+local packaging job with `embed.extraPackages` reaches a terminal state and its vendored line
+renders. Screenshot: `screenshot-embed-options.png` (+ `screenshot-embed-real-job.png`).
+
 ## data-testid contract (stable; qa scripts may rely on these)
 
 Page/list: `offline-packer-page` (`data-plugin-count`), `offline-packer-host-info`,
@@ -81,6 +107,22 @@ Job: `offline-packer-job` (`data-job-id`, `data-job-status`), `offline-packer-jo
 `offline-packer-job-failure`, `offline-packer-result`, `offline-packer-download`,
 `offline-packer-result-zipname`, `offline-packer-result-target`.
 
+Advanced embed options: `offline-packer-advanced` (`data-advanced-open` = `1`/`0`),
+`offline-packer-advanced-toggle`, `offline-packer-advanced-summary`,
+`offline-packer-embed-host`, `offline-packer-embed-host-hint`,
+`offline-packer-embed-declared`, `offline-packer-embed-declared-hint`,
+`offline-packer-extra-packages`, `offline-packer-extra-packages-hint`.
+`offline-packer-result-vendored` (`data-vendored-count`) is the result line: a list of
+`name@version` entries, or the "no dependencies embedded" text.
+
+Manual host override: `offline-packer-host-override` (`data-host-override-open` = `1`/`0`),
+`offline-packer-host-override-toggle`, `offline-packer-host-source` (`data-host-source` =
+`override` / `profile-fallback` / `argv` / `env` / `path` / `unknown`),
+`offline-packer-host-source-unknown`, `offline-packer-host-install-input`,
+`offline-packer-host-version-input`, `offline-packer-host-override-apply`,
+`offline-packer-host-install-hint`, `offline-packer-host-version-hint`,
+`offline-packer-host-override-hint`.
+
 Errors/notices: `offline-packer-error`, `offline-packer-action-error`, `offline-packer-notice`,
 `offline-packer-retry`, `offline-packer-error-dismiss`.
 
@@ -91,3 +133,9 @@ Errors/notices: `offline-packer-error`, `offline-packer-action-error`, `offline-
   `client.js` activation matters there because every API call is mocked.
 - `ui-check.mjs` needs the real node half (`lib/**`) complete; otherwise the section does
   not register and the nav label never appears.
+- Browser-remembered keys (all optional; a denied storage only loses persistence):
+  `dsh-offline-packer:embed` (`{includeHostProvided,includeAllDeclared,extraPackages}`),
+  `dsh-offline-packer:advanced-open` (`1`/`0`),
+  `dsh-offline-packer:host-override` (`{dshInstallDir,dshVersion}`),
+  `dsh-offline-packer:host-override-open` (`1`/`0`),
+  `dsh-offline-packer:output-dir`.

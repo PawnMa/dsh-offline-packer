@@ -21,6 +21,11 @@ import { analyzeRuntimeExternals } from '../../lib/analyze.mjs'
 import { listPlugins } from '../../lib/inventory.mjs'
 import { buildLocalPackage } from '../../lib/local.mjs'
 
+// Keep the phase-1 regression baselines stable: this sandbox's
+// /home/fc/.dsh profile fallback currently points at a different (host-pinned
+// rc.7) installation, so pin the real running 0.2.1-rc.2 host explicitly.
+process.env.DSH_INSTALL_DIR = process.env.DSH_INSTALL_DIR || '/home/fc/.local/lib/node_modules/@deepseek-ai/dsh'
+
 const REPO_ROOT = new URL('../..', import.meta.url).pathname.replace(/\/$/, '')
 const OUTPUT_ROOT = join(REPO_ROOT, 'test', 'out-a')
 const USER_HOME = '/home/fc/.dsh'

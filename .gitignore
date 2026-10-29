@@ -26,3 +26,9 @@ test/c/*.png
 node_modules/
 *.log
 .DS_Store
+
+# Test evidence logs and generator scratch outputs (reports/scripts are tracked)
+test/*/logs/
+test/installer/_scratch-*
+test/embed/installer-probe/
+test/embed/restore-tmp*/

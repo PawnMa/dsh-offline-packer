@@ -47,13 +47,21 @@
 
 | 方法 | 路径 | 入参 | 返回 value |
 |---|---|---|---|
-| GET | `/api/state?home=<abs>&profile=<name>&includeOfficial=1` | 可选 | `{ host:{dshVersion,dshInstallDir,nodeVersion}, dshHome, profile, profileDir, outputRoot, plugins:[Plugin] }` |
+| GET | `/api/state?home=<abs>&profile=<name>&includeOfficial=1&dshInstallDir=<abs>&dshVersion=<ver>` | 可选（后两个用于「魔改/非标准 dsh」手动指定宿主） | `{ host:{dshVersion,dshInstallDir,nodeVersion}, dshHome, profile, profileDir, outputRoot, plugins:[Plugin] }` |
 | GET | `/api/plugins?home=&profile=&includeOfficial=1` | 可选 | `{ dshHome, profile, plugins:[Plugin] }` |
-| POST | `/api/package-local` | `{pluginName, targetDshVersion?, home?, profile?, outputRoot?}` | `{ jobId }` |
+| POST | `/api/package-local` | `{pluginName, targetDshVersion?, home?, profile?, outputRoot?, dshInstallDir?, dshVersion?, embed?}` | `{ jobId }` |
 | GET | `/api/matrix?plugin=<name>` | — | `{ plugin, versions:[VersionRow], dshVersions:[{version,published}] }` |
 | POST | `/api/package-registry` | `{pluginName, version, targetDshVersion, outputRoot?}` | `{ jobId }` |
 | GET | `/api/job?id=<jobId>` | — | `{ id, status:'running'\|'done'\|'error', progress:{phase,percent}, logs:[string], result?, error?, startedAt, finishedAt }` |
 | GET | `/api/download?name=<zip 文件名>&outputRoot=<绝对目录>` | — | 二进制 zip（`Content-Disposition: attachment`；自定义输出目录时必须带 outputRoot） |
+
+**embed 选项（本地通道按需多内嵌）**：`POST /api/package-local` 的 `embed` 字段：
+```js
+{ includeHostProvided?: boolean,   // 连宿主会提供的包（ws/schemastery/node-pty/@deepseek-ai/*）一起内嵌
+  includeAllDeclared?: boolean,    // 内嵌插件 package.json 声明的全部 dependencies/optionalDependencies
+  extraPackages?: string[] }       // 额外指定要内嵌的包名（本地解析；不支持 name@version）
+```
+`includeHostProvided`/`includeAllDeclared` 会增加体积并可能让宿主单例服务出现两份实例，结果 `warnings` 必须写明；`extraPackages` 里无法解析的包记 warning 不中断。
 
 **官方内置插件默认隐藏**：`state/plugins` 只返回 `official === false` 的第三方插件，并附带 `hiddenOfficial`（被隐藏数量）与 `officialCount`；传 `includeOfficial=1`（或 `official=all`）才返回全部。`package-local` 对官方插件默认拒绝（错误码 `OFFICIAL_PLUGIN`），传 `includeOfficial:true` 可放行。
 
@@ -87,8 +95,11 @@
 
 ### lib/host.mjs（A）
 ```js
-getHostInfo() -> { dshHome, profile, dshInstallDir, dshVersion, nodeVersion, hostProvided: string[] }
+getHostInfo(overrides = {}) -> { dshHome, profile, dshInstallDir, dshVersion, nodeVersion,
+                                 hostProvided: string[], source: string, overridden: {installDir:boolean, version:boolean} }
 ```
+- `overrides = { dshInstallDir?, dshVersion? }`：UI 手动指定（魔改/非标准 dsh 场景）。指定后优先使用并跳过对应自动探测；`dshVersion` 未知时可为 `'unknown'`。
+- 自动探测顺序：`DSH_INSTALL_DIR` env → argv[1] realpath 向上找 → **`$DSH_HOME/profiles/node_modules/@deepseek-ai/dsh` 符号链接 realpath**（heal fallback 目录，魔改宿主常用）→ PATH 上 `dsh` 命令 → 常见全局目录。
 - `dshInstallDir`：从 `process.argv[1]` realpath 向上找含 `package.json` 的 `@deepseek-ai/dsh` 目录；失败再试 `ctx` 无关的常见全局路径。
 - `hostProvided`：BFS `dshInstallDir/package.json` 的 `dependencies`+`peerDependencies`（名字集合，像 healProfilesModuleFallback）。额外并入 `'react' | 'react-dom' | 'cordis'` 与否由 pack 决定，这里只返回安装闭包名字。
 - `dshHome`：`process.env.DSH_HOME?.trim() || join(homedir(), '.dsh')`；`profile`：`process.argv` 里 `--profile X` 或首个位置参数为 `web`/`headless`，否则 `'web'`。
@@ -132,6 +143,11 @@ renderInstallers({ pluginName, version, targetDshVersion, hasVendoredDeps, mode 
 renderReadme({...}) -> string
 renderVersionsText({...}) -> string
 ```
+生成的安装器额外契约（v0.1.5 起）：
+- bash 参数 `--dsh-home/--profile/--profile-dir/--node/--dsh-install/--plugin-src/--uninstall/--dry-run`，环境变量 `DSH_PROFILE_DIR`/`NODE_BIN`/`DSH_INSTALL_DIR`；ps1 对应 `-ProfileDir/-Node/-DshInstall`。
+- profile 定位优先级（**显式 CLI 优先于环境变量**）：`--profile-dir > --dsh-home+--profile > DSH_PROFILE_DIR > $DSH_HOME+--profile > ~/.dsh/profiles/web`；PS 同款 `-ProfileDir > -DshHome+-Profile > $env:DSH_PROFILE_DIR > $env:DSH_HOME+Profile > ~/.dsh/profiles/<profile>`。环境变量推导目标与最终目标不一致时必须打印醒目 `[警告]`（含 unset 建议），一致时不告警。
+- 内嵌 JSON 帮助脚本为 **ES5/Node 4+**（`require('fs')`，不用 `node:`/递归 mkdir/可选链/模板串），递归建目录由 shell 完成；Node major<10 仅 info。
+- dsh 探测为**可选 info**：`--dsh-install`/`DSH_INSTALL_DIR` → 启动脚本安装目录 → `$DSH_HOME/profiles/node_modules/@deepseek-ai/dsh`（realpath）→ PATH `dsh`；探测不到不得报错/告警级，措辞避免「未安装 dsh 环境」。
 - 行为与 `/home/fc/dsh-plugin-build/dist/dsh-better-sidebar-offline-0.13.1/install-offline.sh` 同款（可裁剪）：零联网、幂等、`--dsh-home/--profile/--plugin-src/--uninstall/--dry-run`、profile 缺失时按 rc.7/0.2 模板初始化（package.json+`dsh.profile.bundles`（web: base+web-app）/cordis.patch.yml/pnpm-workspace.yaml）、复制 `package/` 到 `$DSH_HOME/profiles/<p>/node_modules/<plugin>`、追加 bundles、旧手写挂载行告警、打印重启/验证提示。ps1 为 5.1 兼容、UTF-8 BOM + CRLF。
 - 生成脚本必须按**目标 DSH 版本**写说明；模板常量放本文件，不做运行期网络。
 
@@ -143,7 +159,10 @@ assembleOfflinePackage(opts) -> Promise<result>
 //   pluginName, version, description?, peerDsh?,
 //   targetDshVersion, mode: 'local'|'registry',
 //   extraVendorDir?,     // 已解析好的 node_modules（registry 模式由 npm 产出），复制进 package/node_modules
-//   outputRoot, log,
+//   outputRoot, log, progress,
+//   includeHostPackages?,    // opt-in：允许把 @deepseek-ai/* 与 manifest peer 名写进产物（仅 local 的 includeHostProvided 传 true）
+//   keepVendoredPackages?,   // 点名要内嵌的包（includeAllDeclared/extraPackages），覆盖命名空间/peer 过滤
+//   vendoredVersions?,       // 让 result.vendored 取产物里的实际 name@version
 //   warnings: string[]
 // }
 ```
@@ -151,10 +170,13 @@ assembleOfflinePackage(opts) -> Promise<result>
 
 ### lib/local.mjs（A，本地流水线，index.js 调用）
 ```js
-buildLocalPackage({ pluginName, targetDshVersion, dshHome, profile }, runtime) -> Promise<result>
-// runtime: { ctx, outputRoot, log }
+buildLocalPackage({ pluginName, targetDshVersion, dshHome, profile, dshInstallDir, dshVersion, embed }, runtime) -> Promise<result>
+// runtime: { ctx, outputRoot, log, progress }
+// embed = { includeHostProvided?: boolean, includeAllDeclared?: boolean, extraPackages?: string[] }
 ```
-= inventory 找插件 → `getHostInfo()` → analyze → vendor 到临时目录 → `assembleOfflinePackage`。若插件 `dir` 为 null 报 `PLUGIN_NOT_FOUND`。
+= inventory 找插件 → `getHostInfo({dshInstallDir, dshVersion})` → analyze → 合并 embed 追加依赖 → vendor 到临时目录 → `assembleOfflinePackage`。若插件 `dir` 为 null 报 `PLUGIN_NOT_FOUND`。`result.vendored` 列出实际内嵌包名@版本，供 UI 展示。
+
+`includeHostProvided` 的解析来源（v0.1.5 起）：宿主包（depth=0 且命中 hostProvided）**优先从当前 `dshInstallDir` 的依赖闭包解析**（`preferResolveFrom`），解析不到则记 warning 跳过、**不回落**到插件位置；传递依赖从其声明者位置解析，因此整棵内嵌树与当前宿主版本一致（不会误用 `$DSH_HOME/profiles/node_modules` 里的过期 heal 链接）。
 
 ### lib/registry.mjs（B）
 ```js

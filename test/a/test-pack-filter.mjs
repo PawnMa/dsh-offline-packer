@@ -17,6 +17,11 @@ import { join } from 'node:path'
 
 import { assembleOfflinePackage } from '../../lib/pack.mjs'
 
+// Keep the phase-1 regression baselines stable: this sandbox's
+// /home/fc/.dsh profile fallback currently points at a different (host-pinned
+// rc.7) installation, so pin the real running 0.2.1-rc.2 host explicitly.
+process.env.DSH_INSTALL_DIR = process.env.DSH_INSTALL_DIR || '/home/fc/.local/lib/node_modules/@deepseek-ai/dsh'
+
 const root = await mkdtemp(join(tmpdir(), 'offline-packer-pack-filter-'))
 
 async function writeJson(path, value) {

@@ -242,15 +242,19 @@ cmd_matrix() {
 
 cmd_package_local() {
   local plugin home profile target body payload include_official expect_error rawout http_code output_root
+  local embed_host embed_declared embed_extra
   take_flag --home; home="$TAKE_FLAG_VALUE"
   take_flag --profile; profile="$TAKE_FLAG_VALUE"
   take_flag --target; target="$TAKE_FLAG_VALUE"
   take_flag --include-official; include_official="$TAKE_FLAG_VALUE"
   take_flag --expect-error; expect_error="$TAKE_FLAG_VALUE"
   take_flag --output-root; output_root="$TAKE_FLAG_VALUE"
+  take_flag --embed-host; embed_host="$TAKE_FLAG_VALUE"
+  take_flag --embed-declared; embed_declared="$TAKE_FLAG_VALUE"
+  take_flag --embed-extra; embed_extra="$TAKE_FLAG_VALUE"
   plugin="${ARGS[0]:-}"
   [ -n "$plugin" ] || die "usage: probe-api.sh package-local <pluginName> [--home H] [--target V]"
-  payload="$(node -e 'const p={pluginName:process.argv[1]};for(const [k,v] of [["home",process.argv[2]],["profile",process.argv[3]],["targetDshVersion",process.argv[4]]])if(v)p[k]=v;if(process.argv[5]==="1")p.includeOfficial=true;if(process.argv[6])p.outputRoot=process.argv[6];process.stdout.write(JSON.stringify(p))' "$plugin" "$home" "$profile" "$target" "$include_official" "$output_root")"
+  payload="$(node -e 'const p={pluginName:process.argv[1]};for(const [k,v] of [["home",process.argv[2]],["profile",process.argv[3]],["targetDshVersion",process.argv[4]]])if(v)p[k]=v;if(process.argv[5]==="1")p.includeOfficial=true;if(process.argv[6])p.outputRoot=process.argv[6];const embed={};if(process.argv[7]==="1")embed.includeHostProvided=true;if(process.argv[8]==="1")embed.includeAllDeclared=true;if(process.argv[9])embed.extraPackages=String(process.argv[9]).split(/[, ]+/).filter(Boolean);if(Object.keys(embed).length>0)p.embed=embed;process.stdout.write(JSON.stringify(p))' "$plugin" "$home" "$profile" "$target" "$include_official" "$output_root" "$embed_host" "$embed_declared" "$embed_extra")"
   rawout="$(api_curl "$PORT" -w $'\n%{http_code}' -X POST -H 'content-type: application/json' --data "$payload" "http://127.0.0.1:$PORT/dsh-offline-packer/api/package-local")"
   http_code="${rawout##*$'\n'}"
   body="${rawout%$'\n'*}"

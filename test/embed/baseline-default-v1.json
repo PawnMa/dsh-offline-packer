@@ -1,0 +1,35 @@
+{
+  "description": "v1 OUTPUT baseline captured before the task-9 pack.mjs opt-in (includeHostPackages), plus the unchanged task-8-generated top-level scripts. Regression compares the pack-generated package/ tree (and result.vendored), NOT the installer/README templates owned by task-8 (lib/scripts.mjs changed concurrently).",
+  "capturedAt": "2026-10-29T06:27:10.154Z",
+  "oldPackMd5": "9f863c2345b53bc39cdcc07c56be9bc4",
+  "local": {
+    "dsh-unlag-offline-1.12.3-dsh-0.2.1-rc.2": {
+      "packageTree": {
+        "fileCount": 11,
+        "aggregate": "0a80b81f9ef919299f6525730aaf5b3f8f5ac7a327de0fbba500eac48fcb8566"
+      },
+      "zipSize": 102946,
+      "zipSha256": "d9c2ce58aa2306aa97efb3bfc67e3120e44b2d1d6c5bafd8c9634f5b64d1c9a1",
+      "vendored": []
+    },
+    "dsh-better-sidebar-offline-0.28.1-dsh-0.2.1-rc.2": {
+      "packageTree": {
+        "fileCount": 477,
+        "aggregate": "06d4b83057dc9d8cf981f3ea2633a9adc4c702ff8df7f4b5d83a232d6594f92b"
+      },
+      "zipSize": 5276914,
+      "zipSha256": "5cb2308787b6206ab8a767be6408ca200d05f38efd37aec2252b225a3ab628ed",
+      "vendored": []
+    }
+  },
+  "historical": {
+    "root": "dsh-better-sidebar-offline-0.13.1-dsh-0.1.0-rc.7",
+    "packageTree": {
+      "fileCount": 12859,
+      "aggregate": "3fee9b87da991802b0f298f40b2e28911da342eeae507fa5a15e34c2a025ef87"
+    },
+    "zipSize": 46940272,
+    "zipSha256": "27f236ecca441f2d9f87897e0936dac07604651535b83300bba7f057e86fe0b0",
+    "vendoredCount": 157
+  }
+}

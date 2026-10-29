@@ -130,6 +130,59 @@ function createHandler(ctx) {
   }
 
   /**
+   * Manual host overrides for a modified/non-standard DSH whose install
+   * directory the automatic probe cannot find. An absolute directory plus an
+   * optional version string; both are only used for labelling and for the
+   * host-provided dependency closure, never to write anywhere.
+   */
+  const hostOverrides = (source) => {
+    const installRaw = typeof source?.dshInstallDir === 'string' ? source.dshInstallDir.trim() : ''
+    const versionRaw = typeof source?.dshVersion === 'string' ? source.dshVersion.trim() : ''
+    const overrides = {}
+    if (installRaw !== '') {
+      if (!isAbsolute(installRaw)) {
+        throw Object.assign(new Error(`DSH 安装目录必须是绝对路径：${installRaw}`), { code: 'BAD_HOST_OVERRIDE' })
+      }
+      overrides.dshInstallDir = resolve(installRaw)
+    }
+    if (versionRaw !== '') {
+      if (!/^[A-Za-z0-9.+~()-]+$/.test(versionRaw)) {
+        throw Object.assign(new Error(`DSH 版本号格式不合法：${versionRaw}`), { code: 'BAD_HOST_OVERRIDE' })
+      }
+      overrides.dshVersion = versionRaw
+    }
+    return overrides
+  }
+
+  /** Query-parameter form of {@link hostOverrides}; empty values mean "auto". */
+  const hostOverridesFromQuery = (url) =>
+    hostOverrides({
+      dshInstallDir: url.searchParams.get('dshInstallDir') ?? '',
+      dshVersion: url.searchParams.get('dshVersion') ?? '',
+    })
+
+  /**
+   * Normalise the "embed more packages" request from the UI. Unknown fields are
+   * ignored; package names are trimmed and de-duplicated, a `name@version` entry
+   * is kept as-is here so the engine can warn about local resolution.
+   */
+  const normaliseEmbed = (raw) => {
+    const source = raw !== null && typeof raw === 'object' ? raw : {}
+    const extraPackages = []
+    if (Array.isArray(source.extraPackages)) {
+      for (const entry of source.extraPackages) {
+        const name = typeof entry === 'string' ? entry.trim() : ''
+        if (name !== '' && !extraPackages.includes(name)) extraPackages.push(name)
+      }
+    }
+    return {
+      includeHostProvided: source.includeHostProvided === true,
+      includeAllDeclared: source.includeAllDeclared === true,
+      extraPackages,
+    }
+  }
+
+  /**
    * The packager carries third-party plugins; in-box/official bundles are part
    * of every DSH installation and are hidden unless the caller asks for them.
    * `includeOfficial=1` (or `official=all`) surfaces them, mostly for
@@ -150,14 +203,18 @@ function createHandler(ctx) {
   const routes = {
     'GET /api/state': async (req, res, url) => {
       const target = scanTarget(url.searchParams)
+      const overrides = hostOverridesFromQuery(url)
       const inventory = await listPlugins(ctx, target)
-      const host = getHostInfo()
+      const host = getHostInfo(overrides)
       const split = splitPlugins(inventory.plugins, url)
       ok(res, {
         host: {
           dshVersion: host.dshVersion,
           dshInstallDir: host.dshInstallDir,
           nodeVersion: host.nodeVersion,
+          source: host.source ?? 'unknown',
+          overridden: host.overridden ?? { installDir: false, version: false },
+          warnings: Array.isArray(host.warnings) ? host.warnings : [],
         },
         dshHome: inventory.dshHome,
         profile: inventory.profile,
@@ -185,16 +242,18 @@ function createHandler(ctx) {
     'POST /api/package-local': async (req, res) => {
       const body = await readJson(req)
       const pluginName = stringField(body.pluginName, 'pluginName')
+      const overrides = hostOverrides(body)
       const targetDshVersion =
         typeof body.targetDshVersion === 'string' && body.targetDshVersion.trim() !== ''
           ? body.targetDshVersion.trim()
-          : getHostInfo().dshVersion
+          : getHostInfo(overrides).dshVersion
       const target = scanTarget(new URLSearchParams(
         typeof body.home === 'string' && body.home.trim() !== '' ? { home: body.home } : {},
       ))
       const profileRequested = typeof body.profile === 'string' && body.profile.trim() !== ''
       const scan = profileRequested ? { ...target, profile: body.profile.trim() } : target
       if (!PROFILE_RE.test(scan.profile)) return fail(res, 400, 'BAD_REQUEST', `profile 名不合法：${scan.profile}`)
+      const embed = normaliseEmbed(body.embed)
       if (body.includeOfficial !== true) {
         const inventory = await listPlugins(ctx, scan)
         const plugin = inventory.plugins.find((entry) => entry.name === pluginName)
@@ -210,7 +269,7 @@ function createHandler(ctx) {
       const targetOutputRoot = resolveOutputRoot(body)
       const created = createJob('local', (jobLog, jobProgress) =>
         buildLocalPackage(
-          { pluginName, targetDshVersion, ...scan },
+          { pluginName, targetDshVersion, ...scan, ...overrides, embed },
           { ctx, outputRoot: targetOutputRoot, log: jobLog, progress: jobProgress },
         ),
       )
@@ -304,14 +363,24 @@ function createHandler(ctx) {
         BAD_BODY: 400,
         BAD_NAME: 400,
         BAD_OUTPUT_DIR: 400,
+        BAD_HOST_OVERRIDE: 400,
         BODY_TOO_LARGE: 413,
         FORBIDDEN: 403,
         NOT_FOUND: 404,
         JOB_NOT_FOUND: 404,
         METHOD_NOT_ALLOWED: 405,
         JOB_BUSY: 429,
+        // Registry lookups: a missing package/version is a 404; upstream outages
+        // and timeouts are gateway faults.
+        VERSION_NOT_FOUND: 404,
+        REGISTRY_UNREACHABLE: 502,
+        REGISTRY_TIMEOUT: 502,
       }
-      if (!res.headersSent) fail(res, statusOf[code] ?? 500, code, message)
+      let status = statusOf[code]
+      if (status === undefined && code === 'REGISTRY_HTTP') {
+        status = /\b404\b/.test(message) ? 404 : 502
+      }
+      if (!res.headersSent) fail(res, status ?? 500, code, message)
       else res.end()
     }
   }

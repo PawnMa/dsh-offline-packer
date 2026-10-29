@@ -2,7 +2,7 @@
   "host": {
     "dshHome": "/home/fc/.dsh",
     "profile": "web",
-    "dshInstallDir": "/home/fc/.nvm/versions/node/v24.14.0/lib/node_modules/@deepseek-ai/dsh",
+    "dshInstallDir": "/home/fc/.local/lib/node_modules/@deepseek-ai/dsh",
     "dshVersion": "0.2.1-rc.2",
     "nodeVersion": "v24.14.0",
     "hostProvided": [
@@ -551,13 +551,19 @@
       "yocto-queue",
       "yoctocolors",
       "zod"
-    ]
+    ],
+    "source": "env",
+    "overridden": {
+      "installDir": false,
+      "version": false
+    },
+    "warnings": []
   },
   "inventory": {
     "dshHome": "/home/fc/.dsh",
     "profile": "web",
     "profileDir": "/home/fc/.dsh/profiles/web",
-    "count": 17,
+    "count": 18,
     "pluginNames": [
       "@deepseek-ai/dsh-base",
       "@deepseek-ai/dsh-experimental-agent-team-profile",
@@ -570,6 +576,7 @@
       "billion-context",
       "dsh-better-sidebar",
       "dsh-cost-meter",
+      "dsh-offline-packer",
       "dsh-reasoning-effort",
       "dsh-rewind-plugin",
       "dsh-session-manager",
@@ -619,27 +626,27 @@
       "dir": "/home/fc/dsh-offline-packer/test/out-a/dsh-unlag-offline-1.12.3-dsh-0.2.1-rc.2",
       "zipPath": "/home/fc/dsh-offline-packer/test/out-a/dsh-unlag-offline-1.12.3-dsh-0.2.1-rc.2.zip",
       "zipName": "dsh-unlag-offline-1.12.3-dsh-0.2.1-rc.2.zip",
-      "sizeBytes": 102946,
+      "sizeBytes": 109810,
       "pluginName": "dsh-unlag",
       "version": "1.12.3",
       "targetDshVersion": "0.2.1-rc.2",
       "mode": "local",
       "vendored": [],
       "warnings": [],
-      "elapsedMs": 532
+      "elapsedMs": 220
     },
     {
       "dir": "/home/fc/dsh-offline-packer/test/out-a/dsh-better-sidebar-offline-0.28.1-dsh-0.2.1-rc.2",
       "zipPath": "/home/fc/dsh-offline-packer/test/out-a/dsh-better-sidebar-offline-0.28.1-dsh-0.2.1-rc.2.zip",
       "zipName": "dsh-better-sidebar-offline-0.28.1-dsh-0.2.1-rc.2.zip",
-      "sizeBytes": 5276914,
+      "sizeBytes": 5283769,
       "pluginName": "dsh-better-sidebar",
       "version": "0.28.1",
       "targetDshVersion": "0.2.1-rc.2",
       "mode": "local",
       "vendored": [],
       "warnings": [],
-      "elapsedMs": 1698
+      "elapsedMs": 1351
     }
   ]
 }

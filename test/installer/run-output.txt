@@ -1,0 +1,169 @@
+
+===== 0. 工具与产物检查 =====
+PASS  node --check lib/scripts.mjs
+PASS  node8 可执行文件：/home/fc/.npm/_npx/853ea35bc6b17ca6/node_modules/node/bin/node（v8.17.0）
+PASS  便携 pwsh：/home/fc/dsh-plugin-build/staging/pwsh/pwsh（7.4.6）
+
+===== 1. 解包 + 包完整性 =====
+PASS  unzip-list：退出码 0
+PASS  zip 含 install-offline.sh
+PASS  zip 含 install-offline.ps1
+PASS  unzip-test：退出码 0
+PASS  unzip-test：包含「No errors detected」
+PASS  unzip-extract：退出码 0
+PASS  解包得到 /home/fc/dsh-offline-packer/test/out-installer/extract/dsh-unlag-offline-1.12.3-dsh-0.2.1-rc.2
+PASS  checksums：退出码 0
+PASS  CHECKSUMS.txt 全部通过
+PASS  sh-syntax：退出码 0
+PASS  extract-js：退出码 0
+PASS  抽取到 5 个内嵌 JS 帮助脚本：NODE_ADD.js NODE_INFO.js NODE_INIT.js NODE_REMOVE.js NODE_VERSION.js 
+PASS  node@8.17.0 --check NODE_ADD.js
+PASS  node@8.17.0 --check NODE_INFO.js
+PASS  node@8.17.0 --check NODE_INIT.js
+PASS  node@8.17.0 --check NODE_REMOVE.js
+PASS  node@8.17.0 --check NODE_VERSION.js
+PASS  内嵌 JS 无 node: 前缀 / const/let / 箭头函数 / 展开 / ?? / ?. / fs.promises / 模板字符串
+PASS  产物 manifest：dependencies:{}、peer 全部 optional
+PASS  README 覆盖「--profile-dir」
+PASS  README 覆盖「DSH_PROFILE_DIR」
+PASS  README 覆盖「Node 8」
+PASS  README 覆盖「魔改」
+PASS  README 覆盖「未检测到 dsh 命令行/安装目录」
+PASS  README 覆盖「--dsh-install」
+
+===== 2. 场景 A：正常 Node v24，全新 DSH_HOME =====
+PASS  a-install：退出码 0
+PASS  a-install：包含「安装完成：dsh-unlag 1.12.3」
+PASS  a-install：包含「检测到宿主   : @deepseek-ai/dsh 0.2.1-rc.2」
+PASS  a-install：包含「定位来源     : --dsh-home + --profile」
+PASS  存在 /home/fc/dsh-offline-packer/test/out-installer/homes/a-node24/profiles/web/package.json
+PASS  存在 /home/fc/dsh-offline-packer/test/out-installer/homes/a-node24/profiles/web/node_modules/dsh-unlag/package.json
+PASS  存在 /home/fc/dsh-offline-packer/test/out-installer/homes/a-node24/profiles/web/cordis.patch.yml
+PASS  存在 /home/fc/dsh-offline-packer/test/out-installer/homes/a-node24/profiles/web/pnpm-workspace.yaml
+PASS  a-install：bundles present
+PASS  a-reinstall：退出码 0
+PASS  a-reinstall：包含「dsh.profile.bundles 已包含 dsh-unlag（幂等）」
+PASS  a-uninstall：退出码 0
+PASS  a-uninstall：包含「已从 dsh.profile.bundles 移除 dsh-unlag」
+PASS  已清理 /home/fc/dsh-offline-packer/test/out-installer/homes/a-node24/profiles/web/node_modules/dsh-unlag
+PASS  a-uninstall：bundles absent
+PASS  a-uninstall-again：退出码 0
+PASS  a-uninstall-again：包含「bundles 里本来就没有 dsh-unlag」
+PASS  a-uninstall-again：包含「插件目录不存在」
+
+===== 3. 场景 B：NODE_BIN=node@8.17.0，全新 DSH_HOME（用户报障场景） =====
+PASS  b-install：退出码 0
+PASS  b-install：包含「Node           : /home/fc/.npm/_npx/853ea35bc6b17ca6/node_modules/node/bin/node（v8.17.0）」
+PASS  b-install：包含「检测到较旧的 Node（v8.17.0）」
+PASS  b-install：包含「安装完成：dsh-unlag 1.12.3」
+PASS  存在 /home/fc/dsh-offline-packer/test/out-installer/homes/b-node8/profiles/web/node_modules/dsh-unlag/package.json
+PASS  b-install：bundles present
+PASS  b-uninstall：退出码 0
+PASS  b-uninstall：包含「已从 dsh.profile.bundles 移除 dsh-unlag」
+PASS  已清理 /home/fc/dsh-offline-packer/test/out-installer/homes/b-node8/profiles/web/node_modules/dsh-unlag
+PASS  b-uninstall：bundles absent
+
+===== 4. 场景 C：--profile-dir + 假 dsh shim + 无任何真实 dsh 来源 =====
+PASS  c-install：退出码 0
+PASS  c-install：包含「profile 目录   : /home/fc/dsh-offline-packer/test/out-installer/homes/c-custom/dsh-profile」
+PASS  c-install：包含「定位来源     : --profile-dir」
+PASS  c-install：包含「检测到 dsh 命令，但没找到标准 @deepseek-ai/dsh 安装目录（可能是魔改版本）」
+PASS  c-install：包含「跳过宿主版本校验」
+PASS  c-install：包含「安装完成：dsh-unlag 1.12.3」
+PASS  c-install：不含「未安装 dsh 环境」
+PASS  存在 /home/fc/dsh-offline-packer/test/out-installer/homes/c-custom/dsh-profile/package.json
+PASS  存在 /home/fc/dsh-offline-packer/test/out-installer/homes/c-custom/dsh-profile/node_modules/dsh-unlag/package.json
+PASS  存在 /home/fc/dsh-offline-packer/test/out-installer/homes/c-custom/dsh-profile/cordis.patch.yml
+PASS  c-install：bundles present
+PASS  c-reinstall：退出码 0
+PASS  c-reinstall：包含「dsh.profile.bundles 已包含 dsh-unlag（幂等）」
+PASS  c-uninstall：退出码 0
+PASS  已清理 /home/fc/dsh-offline-packer/test/out-installer/homes/c-custom/dsh-profile/node_modules/dsh-unlag
+PASS  c-uninstall：bundles absent
+PASS  c2-install：退出码 0
+PASS  c2-install：包含「定位来源     : DSH_PROFILE_DIR」
+PASS  c2-install：不含「与本次安装目标」
+PASS  存在 /home/fc/dsh-offline-packer/test/out-installer/homes/c2-env/custom-profile/node_modules/dsh-unlag/package.json
+PASS  c2-install：bundles present
+PASS  c2-uninstall：退出码 0
+PASS  已清理 /home/fc/dsh-offline-packer/test/out-installer/homes/c2-env/custom-profile/node_modules/dsh-unlag
+PASS  c3-priority：退出码 0
+PASS  c3-priority：包含「profile 目录   : /home/fc/dsh-offline-packer/test/out-installer/homes/c3-priority/target-profile」
+PASS  c3-priority：包含「定位来源     : --profile-dir」
+PASS  c3-priority：不含「profile 目录   : /home/fc/dsh-offline-packer/test/out-installer/homes/c3-priority/ignored-profile」
+PASS  c3-priority：包含「环境变量 DSH_PROFILE_DIR=/home/fc/dsh-offline-packer/test/out-installer/homes/c3-priority/ignored-profile 与本次安装目标 /home/fc/dsh-offline-packer/test/out-installer/homes/c3-priority/target-profile 不同」
+PASS  c3：DSH_PROFILE_DIR 指定的目录未被写入
+PASS  c4-explicit-wins：退出码 0
+PASS  c4-explicit-wins：包含「profile 目录   : /home/fc/dsh-offline-packer/test/out-installer/homes/c4-explicit-wins/explicit-home/profiles/web」
+PASS  c4-explicit-wins：包含「定位来源     : --dsh-home + --profile」
+PASS  c4-explicit-wins：包含「环境变量 DSH_PROFILE_DIR=/home/fc/dsh-offline-packer/test/out-installer/homes/c4-explicit-wins/env-profile 与本次安装目标 /home/fc/dsh-offline-packer/test/out-installer/homes/c4-explicit-wins/explicit-home/profiles/web 不同」
+PASS  存在 /home/fc/dsh-offline-packer/test/out-installer/homes/c4-explicit-wins/explicit-home/profiles/web/node_modules/dsh-unlag/package.json
+PASS  c4-explicit-wins：bundles present
+PASS  c4：环境变量 DSH_PROFILE_DIR 指定的目录未被写入（显式 --dsh-home 生效）
+PASS  c4-uninstall：退出码 0
+PASS  已清理 /home/fc/dsh-offline-packer/test/out-installer/homes/c4-explicit-wins/explicit-home/profiles/web/node_modules/dsh-unlag
+PASS  c5-env-only：退出码 0
+PASS  c5-env-only：包含「profile 目录   : /home/fc/dsh-offline-packer/test/out-installer/homes/c5-env-only/env-profile」
+PASS  c5-env-only：包含「定位来源     : DSH_PROFILE_DIR」
+PASS  c5-env-only：不含「与本次安装目标」
+PASS  存在 /home/fc/dsh-offline-packer/test/out-installer/homes/c5-env-only/env-profile/node_modules/dsh-unlag/package.json
+PASS  c5-env-only：bundles present
+PASS  c5-uninstall：退出码 0
+PASS  已清理 /home/fc/dsh-offline-packer/test/out-installer/homes/c5-env-only/env-profile/node_modules/dsh-unlag
+PASS  c6-home-env：退出码 0
+PASS  c6-home-env：包含「profile 目录   : /home/fc/dsh-offline-packer/test/out-installer/homes/c6-home-env/target-profile」
+PASS  c6-home-env：包含「定位来源     : --profile-dir」
+PASS  c6-home-env：包含「环境变量 DSH_HOME=/home/fc/dsh-offline-packer/test/out-installer/homes/c6-home-env/env-home 与本次安装目标 /home/fc/dsh-offline-packer/test/out-installer/homes/c6-home-env/target-profile 不同」
+PASS  已清理 /home/fc/dsh-offline-packer/test/out-installer/homes/c6-home-env/env-home
+
+===== 5. dsh 探测降级 / --dsh-install / nodes 缺失错误 =====
+PASS  e-dsh-install：退出码 0
+PASS  e-dsh-install：包含「检测到宿主   : @deepseek-ai/dsh 0.2.1-rc.2」
+PASS  e-dsh-install：包含「来源：--dsh-install / DSH_INSTALL_DIR」
+PASS  h-heal：退出码 0
+PASS  h-heal：包含「检测到宿主   : @deepseek-ai/dsh 0.1.0-rc.7」
+PASS  h-heal：包含「来源：自动探测」
+PASS  i-fake-install：退出码 0
+PASS  i-fake-install：包含「指定的 dsh 安装目录不是标准 @deepseek-ai/dsh 包（可能是魔改版本）」
+PASS  i-fake-install：包含「跳过宿主版本校验」
+PASS  j-nonode：退出码 1
+PASS  j-nonode：包含「未找到可用的 Node」
+PASS  j-nonode：包含「--node /path/to/node」
+PASS  已清理 /home/fc/dsh-offline-packer/test/out-installer/homes/j-nonode
+PASS  k-badnode：退出码 1
+PASS  k-badnode：包含「找不到可用的 Node：--node」
+PASS  k-badnode：包含「NODE_BIN=/path/to/node」
+PASS  所有安装输出均无「未安装 dsh 环境」措辞
+
+===== 6. PowerShell 版（PS5.1 语法 AST + BOM/CRLF + DryRun + 安装/卸载） =====
+PASS  install-offline.ps1 带 UTF-8 BOM（efbbbf）
+PASS  install-offline.ps1 全部为 CRLF 行尾
+PASS  ps-ast：退出码 0
+PASS  ps-ast：包含「AST OK」
+PASS  ps-dryrun：退出码 0
+PASS  ps-dryrun：包含「profile 目录   : /home/fc/dsh-offline-packer/test/out-installer/homes/ps-home/profiles/web」
+PASS  ps-dryrun：包含「定位来源     : -DshHome + -Profile」
+PASS  ps-install：退出码 0
+PASS  ps-install：包含「安装完成：dsh-unlag 1.12.3」
+PASS  存在 /home/fc/dsh-offline-packer/test/out-installer/homes/ps-home/profiles/web/node_modules/dsh-unlag/package.json
+PASS  ps-install：bundles present
+PASS  ps-uninstall：退出码 0
+PASS  已清理 /home/fc/dsh-offline-packer/test/out-installer/homes/ps-home/profiles/web/node_modules/dsh-unlag
+PASS  ps-uninstall：bundles absent
+PASS  ps-profile-dir：退出码 0
+PASS  ps-profile-dir：包含「profile 目录   : /home/fc/dsh-offline-packer/test/out-installer/homes/ps-c/custom-profile」
+PASS  ps-profile-dir：包含「定位来源     : -ProfileDir」
+PASS  ps-profile-dir：包含「检测到 dsh 命令，但没找到标准 @deepseek-ai/dsh 安装目录」
+PASS  ps-node8：退出码 0
+PASS  ps-node8：包含「v8.17.0」
+PASS  ps-node8：包含「检测到较旧的 Node」
+PASS  ps-explicit-wins：退出码 0
+PASS  ps-explicit-wins：包含「profile 目录   : /home/fc/dsh-offline-packer/test/out-installer/homes/ps-explicit-wins/explicit-home/profiles/web」
+PASS  ps-explicit-wins：包含「定位来源     : -DshHome + -Profile」
+PASS  ps-explicit-wins：包含「环境变量 DSH_PROFILE_DIR=/home/fc/dsh-offline-packer/test/out-installer/homes/ps-explicit-wins/env-profile 与本次安装目标」
+PASS  已清理 /home/fc/dsh-offline-packer/test/out-installer/homes/ps-explicit-wins/env-profile
+PASS  ps-fake-install：退出码 0
+PASS  ps-fake-install：包含「指定的 dsh 安装目录不是标准 @deepseek-ai/dsh 包」
+
+===== 结果 =====
+ALL TESTS PASSED

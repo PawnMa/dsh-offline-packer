@@ -95,7 +95,6 @@ window.__ModuleLoader__.load({
           zipPluginVersion: '插件版本',
           zipMode: '模式',
           zipModeLocal: '本地',
-          zipVendored: (n) => `内嵌依赖 ${n} 个`,
           download: '下载 zip',
           downloadHint: '下载走同源接口，只能取到产物目录下的 zip。',
           matrixNetwork: '历史版本矩阵需要联网：从 npm registry 读取版本号与 DSH 兼容范围。',
@@ -135,6 +134,40 @@ window.__ModuleLoader__.load({
           targetRequired: '先填目标 DSH 版本。',
           staleHint: '如果接口持续报错，可能是服务端模块尚未就绪（开发中属预期）。',
           loadHint: '点击「刷新」重试。',
+          outputBlock: '产物输出目录',
+          outputDir: '输出目录',
+          outputDefault: '用默认',
+          outputHint: '留空则用 $DSH_HOME/offline-packages；也可以填任意可写绝对路径（共享盘、工作区），zip 会落在那里。',
+          progressLabel: '打包进度',
+          elapsed: '耗时',
+          packagingPercent: (n) => `打包中… ${n}%`,
+          advancedBlock: '高级打包选项',
+          advancedHint: '按需多内嵌依赖：只在目标机缺包时才打开，产物会变大。',
+          expandOptions: '展开',
+          collapseOptions: '收起',
+          advancedSummary: (parts) => (parts.length === 0 ? '默认（只内嵌运行时必需的缺失依赖）' : `已启用：${parts.join(' · ')}`),
+          advancedSummaryHost: '内嵌宿主运行时依赖',
+          advancedSummaryDeclared: '内嵌全部声明依赖',
+          advancedSummaryExtra: (n) => `额外 ${n} 个包`,
+          embedHost: '内嵌宿主运行时依赖（ws / schemastery / node-pty / @deepseek-ai/* 等）',
+          embedHostHint: '体积变大，可能让宿主服务出现两份实例，仅在目标机缺包时用。',
+          embedDeclared: '内嵌插件声明的全部依赖（dependencies + optionalDependencies 完整树）',
+          embedDeclaredHint: '会显著增大产物，通常只在目标机完全没有 node_modules 时使用。',
+          extraPackagesLabel: '额外内嵌包（逗号或空格分隔）',
+          extraPackagesPlaceholder: 'ws, node-pty',
+          extraPackagesHint: '本地通道按已装版本内嵌，不支持 name@version；解析不到的包会在结果 warnings 里列出。',
+          hostOverride: '手动指定宿主（魔改/非标准 DSH）',
+          hostOverrideHint: '自动探测不到宿主（dsh 命令非标准、node 版本异常等）时手动填写。默认扫描源仍是本机 DSH_HOME/profile，不受影响。',
+          hostInstallDir: 'DSH 安装目录',
+          hostInstallHint: '指向含 @deepseek-ai/dsh/package.json 的目录，留空自动探测。',
+          hostVersionField: 'DSH 版本',
+          hostVersionHint: '未知时可手填，如 0.2.1-rc.2。',
+          hostOverrideApply: '应用并刷新',
+          hostOverrideOpenHint: '这两个值随 /api/state 与打包请求一起发送；留空恢复自动探测。',
+          hostSource: (source) => `宿主来源: ${source}`,
+          hostSourceUnknown: '未能自动识别宿主，可手动指定或忽略。',
+          vendoredNone: '无内嵌依赖（全部由宿主提供）',
+          vendoredList: (n) => `内嵌 ${n} 个依赖`,
         }
       : {
           title: 'Offline Packager',
@@ -200,7 +233,6 @@ window.__ModuleLoader__.load({
           zipPluginVersion: 'Plugin version',
           zipMode: 'Mode',
           zipModeLocal: 'local',
-          zipVendored: (n) => `${n} dependency${n === 1 ? '' : 'ies'} vendored`,
           download: 'Download zip',
           downloadHint: 'Downloads go through the same-origin endpoint and only see zips in the output folder.',
           matrixNetwork: 'The version matrix needs the network: it reads versions and DSH peer ranges from the npm registry.',
@@ -248,6 +280,33 @@ window.__ModuleLoader__.load({
           progressLabel: 'Packaging progress',
           elapsed: 'Elapsed',
           packagingPercent: (n) => `Packing… ${n}%`,
+          advancedBlock: 'Advanced packaging options',
+          advancedHint: 'Embed more dependencies on demand: use it only when the target machine lacks packages; the package gets bigger.',
+          expandOptions: 'Show',
+          collapseOptions: 'Hide',
+          advancedSummary: (parts) => (parts.length === 0 ? 'Default (embed only the missing runtime dependencies)' : `Enabled: ${parts.join(' · ')}`),
+          advancedSummaryHost: 'embed host runtime deps',
+          advancedSummaryDeclared: 'embed all declared deps',
+          advancedSummaryExtra: (n) => `+${n} extra package${n === 1 ? '' : 's'}`,
+          embedHost: 'Embed host runtime dependencies (ws / schemastery / node-pty / @deepseek-ai/* …)',
+          embedHostHint: 'Bigger package, and the host service may end up with two instances; use only when the target machine lacks the package.',
+          embedDeclared: 'Embed every dependency the plugin declares (full dependencies + optionalDependencies tree)',
+          embedDeclaredHint: 'Significantly larger package; usually only for a target machine with no node_modules at all.',
+          extraPackagesLabel: 'Extra packages to embed (comma or space separated)',
+          extraPackagesPlaceholder: 'ws, node-pty',
+          extraPackagesHint: 'The local path embeds the installed version; name@version is not supported, and unresolvable names are reported in the result warnings.',
+          hostOverride: 'Specify the host manually (modded / non-standard DSH)',
+          hostOverrideHint: 'Fill these in when the host cannot be detected (non-standard dsh command, unusual node version, …). The default scan source stays this machine DSH_HOME/profile.',
+          hostInstallDir: 'DSH install directory',
+          hostInstallHint: 'A directory containing @deepseek-ai/dsh/package.json; leave empty to auto-detect.',
+          hostVersionField: 'DSH version',
+          hostVersionHint: 'Type it when unknown, e.g. 0.2.1-rc.2.',
+          hostOverrideApply: 'Apply and refresh',
+          hostOverrideOpenHint: 'These values ride along with /api/state and packaging requests; leave empty to fall back to auto-detection.',
+          hostSource: (source) => `Host source: ${source}`,
+          hostSourceUnknown: 'The host could not be detected automatically; specify it manually or ignore this.',
+          vendoredNone: 'No dependencies embedded (all provided by the host)',
+          vendoredList: (n) => `${n} dependenc${n === 1 ? 'y' : 'ies'} embedded`,
         }
 
     /** How many job log lines the panel keeps in view. */
@@ -281,6 +340,73 @@ window.__ModuleLoader__.load({
       } catch {
         // Persistence is a convenience: the current page still uses the value.
       }
+    }
+
+    /** Persisted browser choices for the advanced embed options and the manual host override. */
+    const ADVANCED_OPEN_KEY = 'dsh-offline-packer:advanced-open' // ui-copy-ignore
+    const EMBED_OPTIONS_KEY = 'dsh-offline-packer:embed' // ui-copy-ignore
+    const HOST_OVERRIDE_KEY = 'dsh-offline-packer:host-override' // ui-copy-ignore
+    const HOST_OVERRIDE_OPEN_KEY = 'dsh-offline-packer:host-override-open' // ui-copy-ignore
+
+    /** Storage is denied in some profiles: a read that fails reads as "nothing remembered". */
+    const readStoredText = (key) => {
+      try {
+        return String(window.localStorage.getItem(key) ?? '')
+      } catch {
+        return ''
+      }
+    }
+    const storeText = (key, value) => {
+      try {
+        window.localStorage.setItem(key, String(value ?? ''))
+      } catch {
+        // Persistence is a convenience: this page keeps the live value.
+      }
+    }
+    const readStoredFlag = (key) => readStoredText(key) === '1'
+    const storeFlag = (key, value) => storeText(key, value === true ? '1' : '0')
+    const readStoredJson = (key) => {
+      const raw = readStoredText(key)
+      if (raw === '') return null
+      try {
+        const value = JSON.parse(raw)
+        return value !== null && typeof value === 'object' ? value : null
+      } catch {
+        return null
+      }
+    }
+    const storeJson = (key, value) => storeText(key, JSON.stringify(value ?? {}))
+
+    /** The remembered advanced embed options; anything unreadable falls back to defaults. */
+    const readStoredEmbed = () => {
+      const stored = readStoredJson(EMBED_OPTIONS_KEY)
+      return {
+        includeHostProvided: stored?.includeHostProvided === true,
+        includeAllDeclared: stored?.includeAllDeclared === true,
+        extraPackages: typeof stored?.extraPackages === 'string' ? stored.extraPackages : '',
+      }
+    }
+    /** The remembered manual host override (empty = auto-detect). */
+    const readStoredHostOverride = () => {
+      const stored = readStoredJson(HOST_OVERRIDE_KEY)
+      return {
+        dshInstallDir: typeof stored?.dshInstallDir === 'string' ? stored.dshInstallDir : '',
+        dshVersion: typeof stored?.dshVersion === 'string' ? stored.dshVersion : '',
+      }
+    }
+
+    /** Split a free-form package list ("ws, node-pty") into unique package names. */
+    function parsePackageList(text) {
+      if (typeof text !== 'string') return []
+      const names = []
+      const seen = new Set()
+      for (const part of text.split(/[\s,，;；]+/u)) {
+        const name = part.trim()
+        if (name === '' || seen.has(name)) continue
+        seen.add(name)
+        names.push(name)
+      }
+      return names
     }
 
     // ------------------------------------------------------------------
@@ -527,6 +653,16 @@ window.__ModuleLoader__.load({
         background: 'rgba(128,128,128,0.18)',
       },
       note: { fontSize: 11.5, opacity: 0.75 },
+      optionHint: { fontSize: 11, opacity: 0.62, lineHeight: 1.45 },
+      checkRow: { display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12.5, lineHeight: 1.5, cursor: 'pointer' },
+      subPanel: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+        border: '1px dashed rgba(128,128,128,0.35)',
+        borderRadius: 8,
+        padding: '8px 10px',
+      },
       blockTitle: { fontSize: 11, fontWeight: 600, opacity: 0.66, letterSpacing: '0.02em', marginTop: 2 },
       warnBox: {
         border: '1px solid rgba(226,168,60,0.42)',
@@ -866,9 +1002,17 @@ window.__ModuleLoader__.load({
                 h(PathLine, { label: COPY.zipPath, value: shown(result.zipPath) }),
                 h(PathLine, { label: COPY.zipDir, value: shown(result.dir) }),
               ),
-              vendored.length > 0
-                ? h('div', { style: S.note }, `${COPY.zipVendored(vendored.length)}: ${vendored.map((entry) => shown(entry)).join(', ')}`)
-                : null,
+              h(
+                'div',
+                {
+                  style: S.note,
+                  'data-testid': 'offline-packer-result-vendored',
+                  'data-vendored-count': vendored.length,
+                },
+                vendored.length === 0
+                  ? COPY.vendoredNone
+                  : `${COPY.vendoredList(vendored.length)}: ${vendored.map((entry) => shown(entry)).join(', ')}`,
+              ),
               warnings.length > 0
                 ? h(
                     'div',
@@ -1374,6 +1518,14 @@ window.__ModuleLoader__.load({
       const [outputDir, setOutputDir] = useState(readStoredOutputDir)
       /** A POST that has not answered yet: a second press must not start a second job. */
       const [starting, setStarting] = useState(false)
+      /** Advanced embed options, remembered per browser (extra packages stay as typed text). */
+      const [advancedOpen, setAdvancedOpen] = useState(() => readStoredFlag(ADVANCED_OPEN_KEY))
+      const [embed, setEmbed] = useState(readStoredEmbed)
+      /** Manual host override for modded/non-standard DSH installs, remembered per browser. */
+      const [hostOverride, setHostOverride] = useState(readStoredHostOverride)
+      const [hostOverrideOpen, setHostOverrideOpen] = useState(() => readStoredFlag(HOST_OVERRIDE_OPEN_KEY))
+      /** The override read at mount decides what the first state scan asks for. */
+      const initialHostOverride = useRef(hostOverride)
       /** The job panel is scrolled into view as soon as a job starts. */
       const jobAnchor = useRef(null)
 
@@ -1387,6 +1539,10 @@ window.__ModuleLoader__.load({
           const profile = typeof query?.profile === 'string' ? query.profile.trim() : ''
           if (home !== '') params.set('home', home)
           if (profile !== '') params.set('profile', profile)
+          const dshInstallDir = typeof query?.dshInstallDir === 'string' ? query.dshInstallDir.trim() : ''
+          const dshVersion = typeof query?.dshVersion === 'string' ? query.dshVersion.trim() : ''
+          if (dshInstallDir !== '') params.set('dshInstallDir', dshInstallDir)
+          if (dshVersion !== '') params.set('dshVersion', dshVersion)
           const suffix = params.toString() === '' ? '' : `?${params.toString()}`
           const value = await request(`/api/state${suffix}`, { timeoutMs: STATE_TIMEOUT_MS })
           const safe = value !== null && typeof value === 'object' ? value : { plugins: [] }
@@ -1407,8 +1563,25 @@ window.__ModuleLoader__.load({
       }, [])
 
       useEffect(() => {
-        void loadState()
+        void loadState({
+          dshInstallDir: initialHostOverride.current.dshInstallDir,
+          dshVersion: initialHostOverride.current.dshVersion,
+        })
       }, [loadState])
+
+      // Remember both option sets and both fold states; a denied store only costs persistence.
+      useEffect(() => {
+        storeJson(EMBED_OPTIONS_KEY, embed)
+      }, [embed])
+      useEffect(() => {
+        storeJson(HOST_OVERRIDE_KEY, hostOverride)
+      }, [hostOverride])
+      useEffect(() => {
+        storeFlag(ADVANCED_OPEN_KEY, advancedOpen)
+      }, [advancedOpen])
+      useEffect(() => {
+        storeFlag(HOST_OVERRIDE_OPEN_KEY, hostOverrideOpen)
+      }, [hostOverrideOpen])
 
       /**
        * Poll the single active job once a second until it settles. The effect is
@@ -1485,6 +1658,39 @@ window.__ModuleLoader__.load({
         return typeof version === 'string' && version !== '' && version !== 'unknown' ? version : ''
       }, [state])
 
+      /** The manual host override as request fields; empty values are never sent. */
+      const hostOverridePayload = useMemo(
+        () => ({
+          dshInstallDir: hostOverride.dshInstallDir.trim(),
+          dshVersion: hostOverride.dshVersion.trim(),
+        }),
+        [hostOverride],
+      )
+
+      /** Advanced embed request: both booleans always travel, an empty extra list does not. */
+      const embedRequest = useMemo(() => {
+        const request = {
+          includeHostProvided: embed.includeHostProvided === true,
+          includeAllDeclared: embed.includeAllDeclared === true,
+        }
+        const extra = parsePackageList(embed.extraPackages)
+        if (extra.length > 0) request.extraPackages = extra
+        return request
+      }, [embed])
+
+      /** What the collapsed advanced panel says it has switched on. */
+      const advancedParts = useMemo(() => {
+        const parts = []
+        if (embed.includeHostProvided === true) parts.push(COPY.advancedSummaryHost)
+        if (embed.includeAllDeclared === true) parts.push(COPY.advancedSummaryDeclared)
+        const extra = parsePackageList(embed.extraPackages)
+        if (extra.length > 0) parts.push(COPY.advancedSummaryExtra(extra.length))
+        return parts
+      }, [embed])
+
+      /** How the node half says it found (or was told) the DSH install. */
+      const hostSource = typeof state?.host?.source === 'string' ? state.host.source : ''
+
       /** Build from the installed copy; the scan source is the one this page shows. */
       const packageLocal = useCallback(
         (plugin) => {
@@ -1493,9 +1699,12 @@ window.__ModuleLoader__.load({
           if (typeof state?.dshHome === 'string' && state.dshHome.startsWith('/')) body.home = state.dshHome
           if (typeof state?.profile === 'string' && state.profile !== '') body.profile = state.profile
           if (outputDir.trim() !== '') body.outputRoot = outputDir.trim()
+          body.embed = embedRequest
+          if (hostOverridePayload.dshInstallDir !== '') body.dshInstallDir = hostOverridePayload.dshInstallDir
+          if (hostOverridePayload.dshVersion !== '') body.dshVersion = hostOverridePayload.dshVersion
           void startJob('/api/package-local', body, 'local')
         },
-        [hostVersion, outputDir, startJob, state],
+        [embedRequest, hostOverridePayload, hostVersion, outputDir, startJob, state],
       )
 
       /** Build one published version for a target DSH release (needs network). */
@@ -1503,9 +1712,11 @@ window.__ModuleLoader__.load({
         (payload) => {
           const body = Object.assign({}, payload)
           if (outputDir.trim() !== '') body.outputRoot = outputDir.trim()
+          if (hostOverridePayload.dshInstallDir !== '') body.dshInstallDir = hostOverridePayload.dshInstallDir
+          if (hostOverridePayload.dshVersion !== '') body.dshVersion = hostOverridePayload.dshVersion
           void startJob('/api/package-registry', body, 'registry')
         },
-        [outputDir, startJob],
+        [hostOverridePayload, outputDir, startJob],
       )
 
       const plugins = Array.isArray(state?.plugins) ? state.plugins : []
@@ -1533,7 +1744,27 @@ window.__ModuleLoader__.load({
         return dir !== home && dir.startsWith(`${home}/`) === false
       }, [state])
       const refresh = () => {
-        void loadState({ home: form.home, profile: form.profile })
+        void loadState({
+          home: form.home,
+          profile: form.profile,
+          dshInstallDir: hostOverridePayload.dshInstallDir,
+          dshVersion: hostOverridePayload.dshVersion,
+        })
+      }
+
+      /**
+       * Commit the typed host override and rescan immediately. Both values ride along with
+       * `/api/state` and every packaging request; leaving them empty keeps auto-detection.
+       */
+      const applyHostOverride = () => {
+        storeJson(HOST_OVERRIDE_KEY, hostOverride)
+        setHostOverrideOpen(true)
+        void loadState({
+          home: form.home,
+          profile: form.profile,
+          dshInstallDir: hostOverridePayload.dshInstallDir,
+          dshVersion: hostOverridePayload.dshVersion,
+        })
       }
 
       return h(
@@ -1575,6 +1806,103 @@ window.__ModuleLoader__.load({
             { style: { display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 } },
             h(PathLine, { label: COPY.outputRoot, value: shown(outputRoot), testid: 'offline-packer-output-root' }),
             h(PathLine, { label: COPY.dshInstallDir, value: shown(state?.host?.dshInstallDir) }),
+          ),
+          // Manual host override for modded/non-standard DSH installs where detection fails.
+          h(
+            'div',
+            {
+              style: { display: 'flex', flexDirection: 'column', gap: 6 },
+              'data-testid': 'offline-packer-host-override',
+              'data-host-override-open': hostOverrideOpen ? '1' : '0',
+            },
+            h(
+              'div',
+              { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
+              h(
+                'div',
+                { style: Object.assign({}, S.blockTitle, { marginTop: 0, flex: 1, minWidth: 140 }) },
+                COPY.hostOverride,
+              ),
+              hostSource === ''
+                ? null
+                : h(
+                    'span',
+                    {
+                      style: { fontSize: 11, opacity: 0.62 },
+                      'data-testid': 'offline-packer-host-source',
+                      'data-host-source': hostSource,
+                    },
+                    COPY.hostSource(hostSource),
+                  ),
+              h(
+                Btn,
+                {
+                  small: true,
+                  testid: 'offline-packer-host-override-toggle',
+                  onClick: () => setHostOverrideOpen((current) => current === false),
+                },
+                hostOverrideOpen ? COPY.collapseOptions : COPY.expandOptions,
+              ),
+            ),
+            hostSource === 'unknown'
+              ? h(
+                  'div',
+                  { style: S.warnBox, 'data-testid': 'offline-packer-host-source-unknown' },
+                  COPY.hostSourceUnknown,
+                )
+              : null,
+            hostOverrideOpen
+              ? h(
+                  'div',
+                  { style: S.subPanel },
+                  h(
+                    'div',
+                    { style: S.row },
+                    h('label', { style: S.label, htmlFor: 'offline-packer-host-install-input' }, COPY.hostInstallDir),
+                    h('input', {
+                      id: 'offline-packer-host-install-input', // ui-copy-ignore
+                      type: 'text', // ui-copy-ignore
+                      style: Object.assign({}, S.input, S.inputWide),
+                      value: hostOverride.dshInstallDir,
+                      placeholder: shown(state?.host?.dshInstallDir),
+                      'data-testid': 'offline-packer-host-install-input',
+                      onChange: (event) =>
+                        setHostOverride((current) => Object.assign({}, current, { dshInstallDir: event.target.value })),
+                      spellCheck: false,
+                    }),
+                  ),
+                  h('div', { style: S.optionHint, 'data-testid': 'offline-packer-host-install-hint' }, COPY.hostInstallHint),
+                  h(
+                    'div',
+                    { style: S.row },
+                    h('label', { style: S.label, htmlFor: 'offline-packer-host-version-input' }, COPY.hostVersionField),
+                    h('input', {
+                      id: 'offline-packer-host-version-input', // ui-copy-ignore
+                      type: 'text', // ui-copy-ignore
+                      style: Object.assign({}, S.input, S.inputNarrow),
+                      value: hostOverride.dshVersion,
+                      placeholder: shown(state?.host?.dshVersion),
+                      'data-testid': 'offline-packer-host-version-input',
+                      onChange: (event) =>
+                        setHostOverride((current) => Object.assign({}, current, { dshVersion: event.target.value })),
+                      spellCheck: false,
+                    }),
+                    h(
+                      Btn,
+                      {
+                        primary: true,
+                        small: true,
+                        testid: 'offline-packer-host-override-apply',
+                        disabled: loading,
+                        onClick: applyHostOverride,
+                      },
+                      COPY.hostOverrideApply,
+                    ),
+                  ),
+                  h('div', { style: S.optionHint, 'data-testid': 'offline-packer-host-version-hint' }, COPY.hostVersionHint),
+                  h('div', { style: S.optionHint, 'data-testid': 'offline-packer-host-override-hint' }, COPY.hostOverrideOpenHint),
+                )
+              : h('div', { style: S.note }, COPY.hostOverrideHint),
           ),
           h('div', { style: S.blockTitle }, COPY.scanBlock),
           h(
@@ -1663,6 +1991,111 @@ window.__ModuleLoader__.load({
             ),
           ),
           h('div', { style: S.note }, COPY.outputHint),
+        ),
+
+        // On-demand embedding: the local path normally trims to what the plugin really needs,
+        // so these switches are opt-in, remembered per browser, and echoed in the result.
+        h(
+          'section',
+          {
+            style: S.panel,
+            'data-testid': 'offline-packer-advanced',
+            'data-advanced-open': advancedOpen ? '1' : '0',
+          },
+          h(
+            'div',
+            { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
+            h(
+              'div',
+              { style: Object.assign({}, S.blockTitle, { marginTop: 0, flex: 1, minWidth: 120 }) },
+              COPY.advancedBlock,
+            ),
+            h(
+              'span',
+              { style: { fontSize: 11, opacity: 0.62 }, 'data-testid': 'offline-packer-advanced-summary' },
+              COPY.advancedSummary(advancedParts),
+            ),
+            h(
+              Btn,
+              {
+                small: true,
+                testid: 'offline-packer-advanced-toggle',
+                onClick: () => setAdvancedOpen((current) => current === false),
+              },
+              advancedOpen ? COPY.collapseOptions : COPY.expandOptions,
+            ),
+          ),
+          advancedOpen
+            ? h(
+                'div',
+                { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+                h(
+                  'label',
+                  { style: S.checkRow, htmlFor: 'offline-packer-embed-host' },
+                  h('input', {
+                    id: 'offline-packer-embed-host', // ui-copy-ignore
+                    type: 'checkbox', // ui-copy-ignore
+                    checked: embed.includeHostProvided === true,
+                    'data-testid': 'offline-packer-embed-host',
+                    onChange: (event) =>
+                      setEmbed((current) => Object.assign({}, current, { includeHostProvided: event.target.checked })),
+                  }),
+                  h(
+                    'span',
+                    { style: { display: 'flex', flexDirection: 'column', gap: 2 } },
+                    h('span', null, COPY.embedHost),
+                    h(
+                      'span',
+                      { style: S.optionHint, 'data-testid': 'offline-packer-embed-host-hint' },
+                      COPY.embedHostHint,
+                    ),
+                  ),
+                ),
+                h(
+                  'label',
+                  { style: S.checkRow, htmlFor: 'offline-packer-embed-declared' },
+                  h('input', {
+                    id: 'offline-packer-embed-declared', // ui-copy-ignore
+                    type: 'checkbox', // ui-copy-ignore
+                    checked: embed.includeAllDeclared === true,
+                    'data-testid': 'offline-packer-embed-declared',
+                    onChange: (event) =>
+                      setEmbed((current) => Object.assign({}, current, { includeAllDeclared: event.target.checked })),
+                  }),
+                  h(
+                    'span',
+                    { style: { display: 'flex', flexDirection: 'column', gap: 2 } },
+                    h('span', null, COPY.embedDeclared),
+                    h(
+                      'span',
+                      { style: S.optionHint, 'data-testid': 'offline-packer-embed-declared-hint' },
+                      COPY.embedDeclaredHint,
+                    ),
+                  ),
+                ),
+                h(
+                  'div',
+                  { style: { display: 'flex', flexDirection: 'column', gap: 3 } },
+                  h('label', { style: S.label, htmlFor: 'offline-packer-extra-packages' }, COPY.extraPackagesLabel),
+                  h('input', {
+                    id: 'offline-packer-extra-packages', // ui-copy-ignore
+                    type: 'text', // ui-copy-ignore
+                    style: Object.assign({}, S.input, S.inputWide),
+                    value: embed.extraPackages,
+                    placeholder: COPY.extraPackagesPlaceholder,
+                    'data-testid': 'offline-packer-extra-packages',
+                    onChange: (event) =>
+                      setEmbed((current) => Object.assign({}, current, { extraPackages: event.target.value })),
+                    spellCheck: false,
+                  }),
+                  h(
+                    'div',
+                    { style: S.optionHint, 'data-testid': 'offline-packer-extra-packages-hint' },
+                    COPY.extraPackagesHint,
+                  ),
+                ),
+              )
+            : h('div', { style: S.note }, COPY.advancedHint),
         ),
 
         h(

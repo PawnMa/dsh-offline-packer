@@ -49,6 +49,24 @@ dsh-<plugin>-offline-<version>-dsh-<targetDshVersion>/
 - 原生依赖（如 `node-pty`）不内嵌：离线目标机需要宿主自带；跨平台（Linux↔Windows/macOS）打包时请在同一平台打包。
 - 只读扫描别的 DSH_HOME 时不会写入该目录；产物只写当前进程的 `$DSH_HOME/offline-packages/`。
 
+## 按需多内嵌（高级打包选项）
+
+打包页「高级打包选项」可勾选/填写要额外内嵌的依赖（默认只内嵌服务端真正 import、且宿主不提供的包）：
+
+| 选项 | 作用 |
+|---|---|
+| 内嵌宿主运行时依赖 | 连宿主会提供的 `ws` / `schemastery` / `node-pty` / `@deepseek-ai/*` 也一起内嵌；目标机宿主缺包时用，体积变大，可能让宿主服务出现两份实例 |
+| 内嵌全部声明依赖 | 把插件 `package.json` 的 `dependencies`/`optionalDependencies` 全部内嵌（完整依赖树） |
+| 额外内嵌包 | 逗号/空格分隔的额外包名（本地按已装版本内嵌，不支持 `name@version`） |
+
+结果面板会列出实际内嵌的包（`name@version`）。
+
+## 魔改 / 非标准 DSH（没有 dsh 命令）
+
+- 插件页「当前宿主」里可展开「手动指定宿主（魔改/非标准 DSH）」，填写 DSH 安装目录（含 `@deepseek-ai/dsh/package.json` 的目录）和/或 DSH 版本；留空自动探测。探测顺序：`DSH_INSTALL_DIR` → 启动脚本所在安装 → `$DSH_HOME/profiles/node_modules/@deepseek-ai/dsh`（heal fallback）→ PATH 上的 `dsh` → 常见全局目录。
+- 生成的离线安装器**不依赖 `dsh` 命令**：可用 `--profile-dir <目录>` / `DSH_PROFILE_DIR` 直接指定 profile，`--dsh-install <目录>` 提供宿主安装目录做版本校验，`--node <path>` 指定 Node 可执行文件。
+- 安装器内嵌帮助脚本兼容旧 Node（ES5；Node 8.17 实测可用），不会因系统 `node` 较旧而崩溃；DSH 宿主本身仍建议使用较新 Node。
+
 ## 已知限制与说明
 
 - **两种打包通道的语义不同**：
